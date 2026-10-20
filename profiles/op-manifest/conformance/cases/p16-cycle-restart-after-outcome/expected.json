@@ -1,0 +1,6 @@
+{
+  "conforms": false,
+  "layer": "profile",
+  "rule": "cycle-restart-precedes-outcome",
+  "reference_finding": "precede its outcome step"
+}

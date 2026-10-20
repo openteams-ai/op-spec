@@ -1,0 +1,6 @@
+{
+  "conforms": false,
+  "layer": "schema",
+  "rule": "cycle-pure",
+  "reference_finding": "pure steps without authority"
+}

@@ -1,0 +1,6 @@
+{
+  "conforms": false,
+  "layer": "schema",
+  "rule": "decides-human-only",
+  "reference_finding": "only a human Gate decides"
+}

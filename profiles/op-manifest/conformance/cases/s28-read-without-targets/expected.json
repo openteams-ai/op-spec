@@ -1,0 +1,6 @@
+{
+  "conforms": false,
+  "layer": "schema",
+  "rule": "read-names-targets",
+  "reference_finding": "declares no targets"
+}

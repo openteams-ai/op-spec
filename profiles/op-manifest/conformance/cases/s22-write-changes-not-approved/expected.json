@@ -1,0 +1,6 @@
+{
+  "conforms": false,
+  "layer": "schema",
+  "rule": "write-reads-approved",
+  "reference_finding": "only the approved list"
+}

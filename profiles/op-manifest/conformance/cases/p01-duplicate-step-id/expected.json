@@ -1,0 +1,6 @@
+{
+  "conforms": false,
+  "layer": "profile",
+  "rule": "unique-step-ids",
+  "reference_finding": "declared twice"
+}

@@ -1,0 +1,46 @@
+schema: openteams/op-manifest [0.2]
+id: example.org/op-reviewed-docs-update
+version: "0.1.0"
+name: Reviewed documentation update
+description: Reads pages, proposes edits, and writes only the edits a person approves.
+
+inputs:
+  - name: pages
+    description: Page identifiers to review.
+    required: true
+    schema: {type: array, items: {type: string}, minItems: 1}
+  - name: style_notes
+    required: false
+    default: null
+    schema: {type: [string, "null"]}
+
+authority:
+  ttl_minutes: 30
+
+steps:
+  - id: read
+    cog: {id: example.org/cog-site-reader, version: "0.1.0", source: ../cog-site-reader, task: read}
+    input:
+      pages: {$from: inputs.pages}
+    authority:
+      requires:
+        - {resource: docs-site, action: read, targets: {$from: inputs.pages}}
+
+  - id: propose
+    depends_on: [read]
+    cog: {id: example.org/cog-docs-editor, version: "0.1.0", source: ../cog-docs-editor, task: propose}
+    input:
+      pages: {$from: steps.read.payload.pages}
+      style_notes: {$from: inputs.style_notes, $default: null}
+    gate: {policy: human}
+
+  - id: write
+    depends_on: [propose]
+    cog: {id: example.org/cog-docs-writer, version: "0.1.0", source: ../cog-docs-writer, task: write}
+    authority:
+      requires:
+        - {resource: docs-site, action: write,
+           changes: {$from: steps.propose.decision.approved}}
+
+outputs:
+  applied: {$from: steps.write.payload}

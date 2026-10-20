@@ -1,0 +1,6 @@
+{
+  "conforms": false,
+  "layer": "profile",
+  "rule": "repeat-require-bounds",
+  "reference_finding": "between 1 and count"
+}

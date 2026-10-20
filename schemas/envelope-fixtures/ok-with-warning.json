@@ -1,0 +1,13 @@
+{
+  "envelope": 1,
+  "cog": {"id": "example.org/cog-word-tally", "version": "0.1.0"},
+  "task": "tally",
+  "ok": true,
+  "error": null,
+  "payload": {"counts": {"cog": 2, "op": 1}},
+  "raw": null,
+  "problems": [
+    {"check": "input", "detail": "one supplied text was empty and contributed no words", "severity": "warning"}
+  ],
+  "timing": {"latency_s": 0.02}
+}

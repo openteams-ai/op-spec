@@ -1,0 +1,6 @@
+{
+  "conforms": false,
+  "layer": "profile",
+  "rule": "cycle-costs-complete",
+  "reference_finding": "reservation units for every phase step"
+}

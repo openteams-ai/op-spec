@@ -1,0 +1,6 @@
+{
+  "conforms": false,
+  "layer": "schema",
+  "rule": "no-human-step",
+  "reference_finding": "no human: step kind"
+}

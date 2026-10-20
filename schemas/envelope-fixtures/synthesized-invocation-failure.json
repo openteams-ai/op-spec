@@ -1,0 +1,19 @@
+{
+  "envelope": 1,
+  "cog": {"id": "example.org/cog-summarizer", "version": "0.2.0"},
+  "task": "summarize",
+  "ok": false,
+  "error": {
+    "code": "invocation-failed",
+    "detail": "the Cog exited 1 without writing an envelope",
+    "evidence": {
+      "command": ["pixi", "run", "--manifest-path", "../cog-summarizer/pixi.toml", "summarize", "--", "--request", "requests/summarize.json"],
+      "returncode": 1,
+      "stdout_tail": "",
+      "stderr_tail": "Traceback (most recent call last): ..."
+    }
+  },
+  "payload": null,
+  "raw": "",
+  "problems": []
+}

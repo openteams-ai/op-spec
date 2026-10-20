@@ -1,0 +1,6 @@
+{
+  "conforms": false,
+  "layer": "profile",
+  "rule": "read-requires-dependency",
+  "reference_finding": "without depending on"
+}

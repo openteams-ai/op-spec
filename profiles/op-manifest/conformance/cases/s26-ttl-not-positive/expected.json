@@ -1,0 +1,6 @@
+{
+  "conforms": false,
+  "layer": "schema",
+  "rule": "ttl-positive",
+  "reference_finding": "positive number of minutes"
+}

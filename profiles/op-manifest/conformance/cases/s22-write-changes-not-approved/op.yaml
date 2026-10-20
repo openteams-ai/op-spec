@@ -1,0 +1,35 @@
+schema: openteams/op-manifest [0.2]
+id: example.org/op-conformance
+version: 0.1.0
+name: Conformance case
+inputs:
+- name: texts
+  required: true
+  schema:
+    type: array
+steps:
+- id: compose
+  cog:
+    id: example.org/cog-composer
+    version: 0.1.0
+    source: ../cog-composer
+    task: compose
+  input:
+    texts:
+      $from: inputs.texts
+  gate:
+    policy: human
+- id: write
+  depends_on:
+  - compose
+  cog:
+    id: example.org/cog-writer
+    version: 0.1.0
+    source: ../cog-writer
+    task: write
+  authority:
+    requires:
+    - resource: docs-site
+      action: write
+      changes:
+        $from: steps.compose.payload.changes

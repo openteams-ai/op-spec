@@ -1,0 +1,6 @@
+{
+  "conforms": false,
+  "layer": "schema",
+  "rule": "cog-ref-required",
+  "reference_finding": "missing cog.source"
+}

@@ -1,0 +1,6 @@
+{
+  "conforms": false,
+  "layer": "schema",
+  "rule": "artifact-declared",
+  "reference_finding": "no gate.artifact object"
+}

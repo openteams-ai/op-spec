@@ -1,0 +1,6 @@
+{
+  "conforms": false,
+  "layer": "schema",
+  "rule": "non-empty-steps",
+  "reference_finding": "non-empty steps list"
+}

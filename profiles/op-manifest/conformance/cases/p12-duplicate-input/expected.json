@@ -1,0 +1,6 @@
+{
+  "conforms": false,
+  "layer": "profile",
+  "rule": "unique-inputs",
+  "reference_finding": "declared twice"
+}

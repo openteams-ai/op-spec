@@ -1,0 +1,6 @@
+{
+  "conforms": false,
+  "layer": "schema",
+  "rule": "effectful-no-retry",
+  "reference_finding": "never re-invoked"
+}

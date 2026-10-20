@@ -1,0 +1,6 @@
+{
+  "conforms": false,
+  "layer": "profile",
+  "rule": "input-declared",
+  "reference_finding": "does not declare"
+}

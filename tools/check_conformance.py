@@ -1,0 +1,160 @@
+#!/usr/bin/env python3
+"""Check the Op Spec conformance corpus, examples, and envelope fixtures.
+
+Every case under profiles/op-manifest/conformance/cases/<case>/ holds an
+op.yaml and an expected.json:
+
+    {"conforms": false, "layer": "schema", "rule": "closed-top-level",
+     "reference_finding": "unknown top-level Op spec key"}
+
+`layer` says which part of the profile refuses the document: "schema" means
+the JSON Schema alone refuses it; "profile" means the JSON Schema accepts it
+and a rule stated only in PROFILE.md refuses it. The checker enforces that
+split, so the corpus also documents exactly what the JSON Schema does not
+catch.
+
+With --reference PATH, the checker also loads an implementation's op_spec.py
+(any module exposing validate(doc), OpSpecError and SCHEMA_STRING) and
+requires its verdict to match `conforms` on every case and example.
+`reference_finding` is informative: a mismatch is reported but not counted
+as a failure, because finding text is not normative.
+
+Exit codes: 0 every check passed, 1 at least one failed, 2 usage error.
+"""
+from __future__ import annotations
+
+import argparse
+import copy
+import importlib.util
+import json
+import sys
+from pathlib import Path
+
+import jsonschema
+import yaml
+
+ROOT = Path(__file__).resolve().parents[1]
+PROFILE = ROOT / "profiles" / "op-manifest"
+PROFILE_SCHEMA_PATH = PROFILE / "op-manifest-0.2.schema.json"
+CASES = PROFILE / "conformance" / "cases"
+EXAMPLES = ROOT / "examples"
+ENVELOPE_SCHEMA_PATH = ROOT / "schemas" / "envelope-1.schema.json"
+ENVELOPE_FIXTURES = ROOT / "schemas" / "envelope-fixtures"
+PROFILE_SCHEMA_STRING = "openteams/op-manifest [0.2]"
+
+
+def load_reference(path):
+    spec = importlib.util.spec_from_file_location("op_spec_reference", path)
+    if spec is None or spec.loader is None:
+        raise SystemExit(f"cannot load reference implementation {path}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    for name in ("validate", "OpSpecError", "SCHEMA_STRING"):
+        if not hasattr(module, name):
+            raise SystemExit(f"{path} does not expose {name}")
+    return module
+
+
+def reference_verdict(module, doc):
+    """(conforms, problems) from the reference implementation. A reference
+    that implements this profile's vocabulary under an earlier schema string
+    is checked by substituting its own string for this profile's."""
+    doc = copy.deepcopy(doc)
+    if isinstance(doc, dict) and doc.get("schema") == PROFILE_SCHEMA_STRING:
+        doc["schema"] = module.SCHEMA_STRING
+    try:
+        module.validate(doc)
+    except module.OpSpecError as exc:
+        problems = getattr(exc, "problems", None) or [str(exc)]
+        if isinstance(problems, str):
+            problems = [problems]
+        return False, [str(p) for p in problems]
+    return True, []
+
+
+def schema_errors(validator, doc):
+    return sorted(validator.iter_errors(doc), key=lambda e: list(e.path))
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser.add_argument("--reference", type=Path,
+                        help="an implementation's op_spec.py to compare against")
+    parser.add_argument("--verbose", action="store_true")
+    args = parser.parse_args()
+
+    validator = jsonschema.Draft202012Validator(
+        json.loads(PROFILE_SCHEMA_PATH.read_text()))
+    reference = load_reference(args.reference) if args.reference else None
+    failures, notes, checked = [], [], 0
+
+    for case in sorted(p for p in CASES.iterdir() if p.is_dir()):
+        checked += 1
+        doc = yaml.safe_load((case / "op.yaml").read_text())
+        expected = json.loads((case / "expected.json").read_text())
+        errors = schema_errors(validator, doc)
+        name = case.name
+        if expected["conforms"]:
+            if errors:
+                failures.append(f"{name}: expected to conform; the JSON Schema "
+                                f"refuses it: {errors[0].message}")
+        elif expected["layer"] == "schema" and not errors:
+            failures.append(f"{name}: layer 'schema', but the JSON Schema "
+                            f"accepts it")
+        elif expected["layer"] == "profile" and errors:
+            failures.append(f"{name}: layer 'profile', but the JSON Schema "
+                            f"already refuses it ({errors[0].message}); "
+                            f"move it to layer 'schema'")
+        if reference is not None:
+            conforms, problems = reference_verdict(reference, doc)
+            if conforms != expected["conforms"]:
+                failures.append(f"{name}: reference says conforms={conforms}, "
+                                f"expected {expected['conforms']}"
+                                + (f": {problems[0]}" if problems else ""))
+            finding = expected.get("reference_finding")
+            if finding and not any(finding in p for p in problems):
+                notes.append(f"{name}: reference finding text differs "
+                             f"(expected to contain {finding!r}; got "
+                             f"{problems[:1]})")
+        if args.verbose:
+            print(f"checked {name}")
+
+    for example in sorted(EXAMPLES.glob("*/op.yaml")):
+        checked += 1
+        doc = yaml.safe_load(example.read_text())
+        rel = example.relative_to(ROOT)
+        errors = schema_errors(validator, doc)
+        if errors:
+            failures.append(f"{rel}: example refused by the JSON Schema: "
+                            f"{errors[0].message}")
+        if reference is not None:
+            conforms, problems = reference_verdict(reference, doc)
+            if not conforms:
+                failures.append(f"{rel}: example refused by the reference: "
+                                f"{problems[0]}")
+
+    envelope_validator = jsonschema.Draft202012Validator(
+        json.loads(ENVELOPE_SCHEMA_PATH.read_text()))
+    for fixture in sorted(ENVELOPE_FIXTURES.glob("*.json")):
+        checked += 1
+        doc = json.loads(fixture.read_text())
+        well_formed = not fixture.name.startswith("malformed-")
+        errors = list(envelope_validator.iter_errors(doc))
+        if well_formed and errors:
+            failures.append(f"{fixture.name}: refused by the envelope schema: "
+                            f"{errors[0].message}")
+        if not well_formed and not errors:
+            failures.append(f"{fixture.name}: malformed fixture accepted by "
+                            f"the envelope schema")
+
+    for note in notes:
+        print(f"note: {note}")
+    for failure in failures:
+        print(f"FAIL: {failure}")
+    print(f"{checked} checked, {len(failures)} failed"
+          + (f", compared with {args.reference}" if reference else ""))
+    return 1 if failures else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

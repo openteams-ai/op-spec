@@ -1,0 +1,6 @@
+{
+  "conforms": false,
+  "layer": "schema",
+  "rule": "closed-top-level",
+  "reference_finding": "unknown top-level Op spec key"
+}

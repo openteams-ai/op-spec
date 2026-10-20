@@ -1,0 +1,6 @@
+{
+  "conforms": false,
+  "layer": "schema",
+  "rule": "refused-state",
+  "reference_finding": "does not carry"
+}

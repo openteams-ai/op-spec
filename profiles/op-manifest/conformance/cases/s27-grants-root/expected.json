@@ -1,0 +1,6 @@
+{
+  "conforms": false,
+  "layer": "schema",
+  "rule": "no-grants-root",
+  "reference_finding": "a grant is never readable"
+}

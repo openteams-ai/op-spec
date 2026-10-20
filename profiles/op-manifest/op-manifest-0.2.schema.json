@@ -1,0 +1,362 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/openteams-ai/op-spec/profiles/op-manifest/op-manifest-0.2.schema.json",
+  "title": "openteams/op-manifest [0.2]",
+  "description": "Structural schema for an op.yaml execution manifest. It covers keys, types, enumerations, and single-document cross-field rules. Rules that relate one part of the document to another by name (step ids, dependencies, input names, cycle expansion) are defined in PROFILE.md and exercised by the conformance corpus; passing this schema is necessary but not sufficient for conformance.",
+  "type": "object",
+  "required": ["schema", "id", "version", "name", "steps"],
+  "additionalProperties": false,
+  "properties": {
+    "schema": {"const": "openteams/op-manifest [0.2]"},
+    "id": {"$ref": "#/$defs/nonEmptyString"},
+    "version": {"$ref": "#/$defs/nonEmptyString"},
+    "name": {"$ref": "#/$defs/nonEmptyString"},
+    "description": {"type": "string"},
+    "inputs": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/input"}
+    },
+    "steps": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/step"}
+    },
+    "outputs": {
+      "type": "object",
+      "additionalProperties": {"$ref": "#/$defs/expr"}
+    },
+    "track": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "records": {"type": "array", "items": {"type": "string"}}
+      }
+    },
+    "authority": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "ttl_minutes": {"type": "number", "exclusiveMinimum": 0}
+      }
+    },
+    "cycle": {"$ref": "#/$defs/cycle"}
+  },
+  "not": {"required": ["cycle", "authority"]},
+  "$defs": {
+    "nonEmptyString": {"type": "string", "minLength": 1},
+    "stepId": {"type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"},
+
+    "input": {
+      "type": "object",
+      "required": ["name"],
+      "additionalProperties": false,
+      "properties": {
+        "name": {"$ref": "#/$defs/nonEmptyString"},
+        "description": {"type": "string"},
+        "required": {"type": "boolean"},
+        "default": true,
+        "schema": {"type": ["object", "boolean"]}
+      }
+    },
+
+    "step": {
+      "type": "object",
+      "required": ["id", "cog"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {"$ref": "#/$defs/stepId"},
+        "name": {"type": "string"},
+        "depends_on": {"type": "array", "items": {"type": "string"}},
+        "cog": {"$ref": "#/$defs/cogRef"},
+        "foreach": {"$ref": "#/$defs/foreach"},
+        "input": {"$ref": "#/$defs/expr"},
+        "expected_outcome": {"type": "string"},
+        "gate": {"$ref": "#/$defs/gate"},
+        "on_fail": {"enum": ["stop", "skip", "retry-once"]},
+        "authority": {"$ref": "#/$defs/stepAuthority"},
+        "repeat": {"$ref": "#/$defs/repeat"}
+      },
+      "allOf": [
+        {"$comment": "The runner issues no per-element grants.",
+         "not": {"required": ["foreach", "authority"]}},
+        {"$comment": "An effectful step is never repeated.",
+         "not": {"required": ["repeat", "authority"]}},
+        {"$comment": "An effectful step recovers by resume, never by re-invocation.",
+         "not": {"required": ["authority", "on_fail"],
+                 "properties": {"on_fail": {"const": "retry-once"}}}},
+        {"$comment": "A human decides about one set of proposals, so a human-gated step is never repeated.",
+         "not": {"required": ["repeat", "gate"],
+                 "properties": {"gate": {"required": ["policy"],
+                                         "properties": {"policy": {"const": "human"}}}}}}
+      ]
+    },
+
+    "cogRef": {
+      "type": "object",
+      "required": ["id", "source", "task"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {"$ref": "#/$defs/nonEmptyString"},
+        "version": {"type": ["string", "null"]},
+        "source": {"$ref": "#/$defs/nonEmptyString"},
+        "task": {"$ref": "#/$defs/nonEmptyString"}
+      }
+    },
+
+    "foreach": {
+      "type": "object",
+      "required": ["items", "as"],
+      "additionalProperties": false,
+      "properties": {
+        "items": {"$ref": "#/$defs/expr"},
+        "as": {
+          "type": "string",
+          "pattern": "^[A-Za-z_][A-Za-z0-9_]*$",
+          "not": {"enum": ["inputs", "steps", "run", "request"]}
+        }
+      }
+    },
+
+    "repeat": {
+      "type": "object",
+      "required": ["count"],
+      "additionalProperties": false,
+      "properties": {
+        "count": {"type": "integer", "minimum": 1, "maximum": 5},
+        "require": {"type": "integer", "minimum": 1, "maximum": 5},
+        "mode": {"enum": ["all", "until-required"]}
+      }
+    },
+
+    "gate": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "policy": {"enum": ["envelope-ok-no-error-problems", "human"]},
+        "guards": {"type": "array", "maxItems": 0},
+        "decides": {"enum": ["changes", "artifact"]},
+        "artifact": {"$ref": "#/$defs/artifact"}
+      },
+      "allOf": [
+        {"$comment": "Only a human Gate decides about something.",
+         "if": {"anyOf": [{"required": ["decides"]}, {"required": ["artifact"]}]},
+         "then": {"required": ["policy"], "properties": {"policy": {"const": "human"}}}},
+        {"$comment": "An artifact Gate declares the artifact it asks about.",
+         "if": {"required": ["decides"], "properties": {"decides": {"const": "artifact"}}},
+         "then": {"required": ["artifact"]}},
+        {"$comment": "An artifact belongs only to a Gate that decides about an artifact.",
+         "if": {"required": ["artifact"]},
+         "then": {"required": ["decides"], "properties": {"decides": {"const": "artifact"}}}}
+      ]
+    },
+
+    "artifact": {
+      "type": "object",
+      "required": ["kind", "digests"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {"$ref": "#/$defs/expr"},
+        "id": {"$ref": "#/$defs/expr"},
+        "summary": {"$ref": "#/$defs/expr"},
+        "detail": {"$ref": "#/$defs/expr"},
+        "digests": {
+          "allOf": [
+            {"type": "object", "minProperties": 1,
+             "additionalProperties": {"$ref": "#/$defs/expr"}},
+            {"$ref": "#/$defs/notOperator"}
+          ]
+        }
+      }
+    },
+
+    "stepAuthority": {
+      "type": "object",
+      "required": ["requires"],
+      "additionalProperties": false,
+      "properties": {
+        "requires": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"$ref": "#/$defs/requirement"}
+        }
+      }
+    },
+
+    "requirement": {
+      "type": "object",
+      "required": ["resource", "action"],
+      "additionalProperties": false,
+      "properties": {
+        "resource": {"$ref": "#/$defs/nonEmptyString"},
+        "action": {"$ref": "#/$defs/nonEmptyString"},
+        "targets": {"$ref": "#/$defs/expr"},
+        "repositories": {"$ref": "#/$defs/expr",
+                         "$comment": "Deprecated alias for targets."},
+        "changes": {"$ref": "#/$defs/expr"}
+      },
+      "not": {"required": ["targets", "repositories"]},
+      "if": {"properties": {"action": {"const": "write"}}},
+      "then": {
+        "required": ["changes"],
+        "properties": {
+          "changes": {
+            "type": "object",
+            "required": ["$from"],
+            "additionalProperties": false,
+            "properties": {
+              "$from": {"type": "string",
+                        "pattern": "^steps\\.[a-z0-9]+(-[a-z0-9]+)*\\.decision\\.approved$"}
+            }
+          }
+        }
+      },
+      "else": {
+        "not": {"required": ["changes"]},
+        "anyOf": [
+          {"required": ["targets"], "properties": {"targets": {"not": {"type": "null"}}}},
+          {"required": ["repositories"], "properties": {"repositories": {"not": {"type": "null"}}}}
+        ]
+      }
+    },
+
+    "cycle": {
+      "type": "object",
+      "required": ["outcome_step", "outcome_field", "max_attempts",
+                   "max_cost_units", "costs", "transitions"],
+      "additionalProperties": false,
+      "properties": {
+        "outcome_step": {"$ref": "#/$defs/stepId"},
+        "outcome_field": {"$ref": "#/$defs/nonEmptyString"},
+        "max_attempts": {"$ref": "#/$defs/expr"},
+        "max_cost_units": {"$ref": "#/$defs/expr"},
+        "costs": {
+          "type": "object",
+          "additionalProperties": {"type": "integer", "minimum": 0}
+        },
+        "transitions": {
+          "type": "object",
+          "minProperties": 1,
+          "propertyNames": {"minLength": 1, "not": {"const": "initial"}},
+          "additionalProperties": {"$ref": "#/$defs/transition"}
+        },
+        "terminal_errors": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "array", "minItems": 1, "uniqueItems": true,
+            "items": {"$ref": "#/$defs/nonEmptyString"}
+          }
+        }
+      }
+    },
+
+    "transition": {
+      "type": "object",
+      "required": ["restart"],
+      "additionalProperties": false,
+      "properties": {
+        "restart": {"$ref": "#/$defs/stepId"},
+        "prepare": {"type": "array", "items": {"$ref": "#/$defs/step"}},
+        "replace": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "input": {"$ref": "#/$defs/expr"},
+              "depends_on": {"type": "array", "items": {"type": "string"}}
+            }
+          }
+        }
+      }
+    },
+
+    "expr": {
+      "$comment": "A mapping expression. An object whose key set is EXACTLY one operator's is that operator; every other object is ordinary data and is walked; scalars are literals. A $-prefixed key that names no operator is refused wherever it appears.",
+      "anyOf": [
+        {"type": ["string", "number", "boolean", "null"]},
+        {"type": "array", "items": {"$ref": "#/$defs/expr"}},
+        {"$ref": "#/$defs/opFrom"},
+        {"$ref": "#/$defs/opFromDefault"},
+        {"$ref": "#/$defs/opPath"},
+        {"$ref": "#/$defs/opRunDir"},
+        {"$ref": "#/$defs/opStem"},
+        {"$ref": "#/$defs/opLiteral"},
+        {"$ref": "#/$defs/opSha256"},
+        {"$ref": "#/$defs/dataObject"}
+      ]
+    },
+
+    "dataObject": {
+      "allOf": [
+        {"type": "object",
+         "propertyNames": {"anyOf": [
+           {"not": {"pattern": "^\\$"}},
+           {"enum": ["$from", "$default", "$path", "$run_dir", "$stem", "$literal", "$sha256"]}
+         ]},
+         "additionalProperties": {"$ref": "#/$defs/expr"}},
+        {"$ref": "#/$defs/notOperator"}
+      ]
+    },
+
+    "notOperator": {
+      "$comment": "True when an object's key set is not exactly an operator's.",
+      "not": {"anyOf": [
+        {"type": "object", "required": ["$from"], "maxProperties": 1},
+        {"type": "object", "required": ["$from", "$default"], "maxProperties": 2},
+        {"type": "object", "required": ["$path"], "maxProperties": 1},
+        {"type": "object", "required": ["$run_dir"], "maxProperties": 1},
+        {"type": "object", "required": ["$stem"], "maxProperties": 1},
+        {"type": "object", "required": ["$literal"], "maxProperties": 1},
+        {"type": "object", "required": ["$sha256"], "maxProperties": 1}
+      ]}
+    },
+
+    "mappingPath": {
+      "type": "string",
+      "minLength": 1,
+      "not": {"pattern": "^grants(\\.|$)"}
+    },
+
+    "opFrom": {
+      "type": "object", "required": ["$from"], "additionalProperties": false,
+      "properties": {"$from": {"$ref": "#/$defs/mappingPath"}}
+    },
+    "opFromDefault": {
+      "type": "object", "required": ["$from", "$default"], "additionalProperties": false,
+      "properties": {
+        "$from": {"$ref": "#/$defs/mappingPath"},
+        "$default": {"$ref": "#/$defs/expr"}
+      }
+    },
+    "opPath": {
+      "type": "object", "required": ["$path"], "additionalProperties": false,
+      "properties": {"$path": {"$ref": "#/$defs/expr"}}
+    },
+    "opRunDir": {
+      "type": "object", "required": ["$run_dir"], "additionalProperties": false,
+      "properties": {
+        "$run_dir": {
+          "anyOf": [
+            {"type": "string",
+             "$comment": "Relative, with no '..' segment. Reserved control entries are a profile rule checked after normalization.",
+             "pattern": "^(?!/)(?!(.*/)?\\.\\.(/|$))"},
+            {"allOf": [{"not": {"type": "string"}}, {"$ref": "#/$defs/expr"}],
+             "$comment": "A computed subpath; containment is checked when it is evaluated."}
+          ]
+        }
+      }
+    },
+    "opStem": {
+      "type": "object", "required": ["$stem"], "additionalProperties": false,
+      "properties": {"$stem": {"$ref": "#/$defs/expr"}}
+    },
+    "opLiteral": {
+      "type": "object", "required": ["$literal"], "additionalProperties": false,
+      "properties": {"$literal": true}
+    },
+    "opSha256": {
+      "type": "object", "required": ["$sha256"], "additionalProperties": false,
+      "properties": {"$sha256": {"$ref": "#/$defs/expr"}}
+    }
+  }
+}

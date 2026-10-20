@@ -1,0 +1,39 @@
+schema: openteams/op-manifest [0.2]
+id: example.org/op-contract-acceptance
+version: "0.1.0"
+name: Contract acceptance
+description: Drafts a Cog contract, pauses for a person to accept it, then authors source bound to the accepted contract.
+
+inputs:
+  - name: brief
+    description: What the new Cog should do.
+    required: true
+    schema: {type: string, minLength: 1}
+
+steps:
+  - id: design
+    cog: {id: example.org/cog-author, version: "0.1.0", source: ../cog-author, task: design}
+    input:
+      brief: {$from: inputs.brief}
+    expected_outcome: A testable contract for the requested Cog.
+    gate:
+      policy: human
+      decides: artifact
+      artifact:
+        kind: cog-contract
+        summary: {$from: steps.design.payload.contract.purpose}
+        digests:
+          contract: {$sha256: {$from: steps.design.payload.contract}}
+
+  - id: author
+    depends_on: [design]
+    cog: {id: example.org/cog-author, version: "0.1.0", source: ../cog-author, task: author}
+    input:
+      contract: {$from: steps.design.payload.contract}
+      contract_sha256: {$from: steps.design.decision.artifact.digests.contract}
+      output_dir: {$run_dir: authored}
+    expected_outcome: Complete source preserving the accepted contract.
+
+outputs:
+  source_dir: {$from: steps.author.payload.path}
+  contract_sha256: {$from: steps.design.decision.artifact.digests.contract}

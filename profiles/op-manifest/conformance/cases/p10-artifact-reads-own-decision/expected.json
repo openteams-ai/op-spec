@@ -1,0 +1,6 @@
+{
+  "conforms": false,
+  "layer": "profile",
+  "rule": "artifact-no-own-decision",
+  "reference_finding": "has no human Gate"
+}

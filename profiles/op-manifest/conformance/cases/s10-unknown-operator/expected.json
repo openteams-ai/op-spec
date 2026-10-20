@@ -1,0 +1,6 @@
+{
+  "conforms": false,
+  "layer": "schema",
+  "rule": "closed-operators",
+  "reference_finding": "unknown mapping operator"
+}

@@ -1,0 +1,6 @@
+{
+  "conforms": false,
+  "layer": "schema",
+  "rule": "no-tool-step",
+  "reference_finding": "no tool: step kind"
+}

@@ -1,0 +1,6 @@
+{
+  "conforms": false,
+  "layer": "schema",
+  "rule": "repeat-bounds",
+  "reference_finding": "between 1 and 5"
+}

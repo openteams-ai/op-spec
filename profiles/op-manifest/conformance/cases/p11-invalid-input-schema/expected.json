@@ -1,0 +1,6 @@
+{
+  "conforms": false,
+  "layer": "profile",
+  "rule": "input-schema-valid",
+  "reference_finding": "not valid JSON Schema"
+}

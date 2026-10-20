@@ -1,0 +1,6 @@
+{
+  "conforms": false,
+  "layer": "schema",
+  "rule": "schema-string",
+  "reference_finding": "the Op spec schema must be"
+}

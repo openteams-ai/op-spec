@@ -1,0 +1,6 @@
+{
+  "conforms": false,
+  "layer": "schema",
+  "rule": "no-per-element-grants",
+  "reference_finding": "authority on a foreach step"
+}

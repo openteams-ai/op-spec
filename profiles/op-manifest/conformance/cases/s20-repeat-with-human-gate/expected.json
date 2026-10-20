@@ -1,0 +1,6 @@
+{
+  "conforms": false,
+  "layer": "schema",
+  "rule": "human-gate-no-repeat",
+  "reference_finding": "never repeated"
+}

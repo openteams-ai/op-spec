@@ -1,0 +1,6 @@
+{
+  "conforms": false,
+  "layer": "schema",
+  "rule": "run-dir-relative",
+  "reference_finding": "never leaves the run"
+}

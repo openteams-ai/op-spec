@@ -1,0 +1,6 @@
+{
+  "conforms": false,
+  "layer": "schema",
+  "rule": "step-id-format",
+  "reference_finding": "lowercase alphanumerics"
+}

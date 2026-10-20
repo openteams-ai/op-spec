@@ -1,0 +1,192 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/openteams-ai/op-spec/schemas/envelope-1.schema.json",
+  "title": "Op step result envelope, version 1",
+  "description": "The JSON object a Cog writes as the result of one Op step invocation. See ENVELOPE.md. Consumers ignore unknown fields.",
+  "type": "object",
+  "required": [
+    "envelope",
+    "ok",
+    "problems"
+  ],
+  "properties": {
+    "envelope": {
+      "const": 1
+    },
+    "ok": {
+      "type": "boolean"
+    },
+    "cog": {
+      "type": "object",
+      "required": [
+        "id"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "version": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "task": {
+      "type": "string"
+    },
+    "error": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "$ref": "#/$defs/error"
+        }
+      ]
+    },
+    "payload": true,
+    "raw": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "problems": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/problem"
+      }
+    },
+    "binding": {
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "timing": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "properties": {
+        "latency_s": {
+          "type": "number",
+          "minimum": 0
+        }
+      }
+    },
+    "provider_result": {
+      "type": [
+        "object",
+        "null"
+      ]
+    }
+  },
+  "allOf": [
+    {
+      "$comment": "An envelope that carries an error is not ok.",
+      "if": {
+        "required": [
+          "error"
+        ],
+        "properties": {
+          "error": {
+            "type": "object"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "ok": {
+            "const": false
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "error": {
+      "type": "object",
+      "required": [
+        "code",
+        "detail"
+      ],
+      "properties": {
+        "code": {
+          "type": "string",
+          "minLength": 1
+        },
+        "detail": {
+          "type": "string"
+        },
+        "evidence": {
+          "$ref": "#/$defs/evidence"
+        }
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "required": [
+        "command",
+        "returncode",
+        "stdout_tail",
+        "stderr_tail"
+      ],
+      "properties": {
+        "command": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "returncode": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "stdout_tail": {
+          "type": "string",
+          "maxLength": 2000
+        },
+        "stderr_tail": {
+          "type": "string",
+          "maxLength": 2000
+        },
+        "previous_attempts": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/evidence"
+          }
+        }
+      }
+    },
+    "problem": {
+      "type": "object",
+      "required": [
+        "check",
+        "detail",
+        "severity"
+      ],
+      "properties": {
+        "check": {
+          "type": "string",
+          "minLength": 1
+        },
+        "detail": {
+          "type": "string"
+        },
+        "severity": {
+          "enum": [
+            "error",
+            "warning",
+            "warn"
+          ]
+        }
+      }
+    }
+  }
+}

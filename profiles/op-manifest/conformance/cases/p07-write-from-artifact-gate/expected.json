@@ -1,0 +1,6 @@
+{
+  "conforms": false,
+  "layer": "profile",
+  "rule": "artifact-authorizes-no-write",
+  "reference_finding": "authorizes no write"
+}

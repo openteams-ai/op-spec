@@ -1,0 +1,6 @@
+{
+  "conforms": false,
+  "layer": "schema",
+  "rule": "no-guards",
+  "reference_finding": "gate.guards"
+}

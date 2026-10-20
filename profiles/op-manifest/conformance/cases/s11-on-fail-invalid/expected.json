@@ -1,0 +1,6 @@
+{
+  "conforms": false,
+  "layer": "schema",
+  "rule": "on-fail",
+  "reference_finding": "declares on_fail"
+}

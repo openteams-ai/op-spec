@@ -1,0 +1,6 @@
+{
+  "conforms": false,
+  "layer": "profile",
+  "rule": "decision-needs-human-gate",
+  "reference_finding": "has no human Gate"
+}

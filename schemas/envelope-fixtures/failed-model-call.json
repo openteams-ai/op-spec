@@ -1,0 +1,11 @@
+{
+  "envelope": 1,
+  "cog": {"id": "example.org/cog-summarizer", "version": "0.2.0"},
+  "task": "summarize",
+  "ok": false,
+  "error": {"code": "model-call-failed", "detail": "the bound endpoint returned HTTP 502"},
+  "payload": null,
+  "raw": null,
+  "problems": [],
+  "binding": {"model_identity": "verified", "violations": []}
+}

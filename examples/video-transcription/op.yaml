@@ -1,0 +1,56 @@
+schema: openteams/op-manifest [0.2]
+id: example.org/op-video-transcription
+version: "0.1.0"
+name: Video transcription with speaker attribution
+description: Produces a timestamped, speaker-labelled transcript from a recording.
+
+inputs:
+  - name: media_path
+    description: The recording, relative to the request file.
+    required: true
+  - name: speaker_count
+    description: How many speakers to expect, when you know.
+    required: false
+    default: null
+    schema: {type: [integer, "null"]}
+  - name: speaker_mapping
+    description: Diarization label -> person name.
+    required: false
+    default: {}
+    schema: {type: object}
+
+steps:
+  - id: transcribe
+    name: Transcribe the recording
+    cog:
+      id: example.org/cog-media-transcriber
+      version: "0.1.0"
+      source: ../cog-media-transcriber
+      task: transcribe
+    input:
+      media_path: {$path: {$from: inputs.media_path}}
+      output_dir: {$run_dir: transcription}
+      artifact_stem: {$stem: {$from: inputs.media_path}}
+    expected_outcome: A timestamped transcript bundle and normalized local audio.
+    gate: {policy: envelope-ok-no-error-problems}
+    on_fail: stop
+
+  - id: attribute-speakers
+    name: Attribute transcript segments to speakers
+    depends_on: [transcribe]
+    cog:
+      id: example.org/cog-speaker-attribution
+      version: "0.1.0"
+      source: ../cog-speaker-attribution
+      task: attribute
+    input:
+      audio_path: {$from: steps.transcribe.payload.audio_path}
+      transcript_json: {$from: steps.transcribe.payload.transcript_json}
+      output_dir: {$run_dir: attribution}
+      num_speakers: {$from: inputs.speaker_count, $default: null}
+      speaker_mapping: {$from: inputs.speaker_mapping, $default: {}}
+    expected_outcome: A transcript with explicit primary, mixed, or unassigned labels.
+    on_fail: stop
+
+outputs:
+  transcript: {$from: steps.attribute-speakers.payload.speaker_labelled_markdown}

@@ -1,0 +1,6 @@
+{
+  "conforms": false,
+  "layer": "profile",
+  "rule": "run-dir-reserved",
+  "reference_finding": "control entries"
+}
