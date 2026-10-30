@@ -1,0 +1,5 @@
+{
+  "conforms": false,
+  "layer": "profile",
+  "rule": "cycle-limits-read-inputs"
+}

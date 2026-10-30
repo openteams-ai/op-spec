@@ -13,6 +13,7 @@ Each directory under `cases/` holds an `op.yaml` and an `expected.json`:
 | `layer` | For a non-conforming case, what refuses it: `schema` — the JSON Schema alone; `profile` — a rule stated only in PROFILE.md, which the JSON Schema accepts. |
 | `rule` | The rule id in PROFILE.md. |
 | `reference_finding` | Informative: text the reference implementation's finding contains. |
+| `reference_divergence` | Informative: why the reference implementation's verdict differs from `conforms`, for a rule this profile states and the reference does not yet implement. |
 | `note` | Informative. |
 
 Case names begin with `v` (conforms), `s` (refused by the schema), or `p`
@@ -28,4 +29,7 @@ python tools/check_conformance.py [--reference path/to/op_spec.py]
 
 With `--reference`, an implementation that implements this vocabulary under the
 earlier identifier `[0.1]` is checked by substituting its identifier for
-`[0.2]`.
+`[0.2]` and reading `title` as that version's `name`. Its verdict must match
+`conforms` on every case except one that carries `reference_divergence`; those
+are reported as notes, and a note also says when the reference has come to
+agree, so the field can be removed.

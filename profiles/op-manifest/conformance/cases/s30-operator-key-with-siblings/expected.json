@@ -1,0 +1,7 @@
+{
+  "conforms": false,
+  "layer": "schema",
+  "rule": "operator-exact-keyset",
+  "note": "An object holding an operator key plus other keys used to be ordinary data, so a misspelled sibling (default: for $default:) silently changed meaning. Use $literal for data that needs $-prefixed keys.",
+  "reference_divergence": "The reference (machinery 0.9.3) treats this object as ordinary data; [0.2] refuses it."
+}

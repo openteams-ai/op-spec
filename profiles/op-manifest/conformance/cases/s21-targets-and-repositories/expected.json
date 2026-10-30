@@ -1,6 +1,0 @@
-{
-  "conforms": false,
-  "layer": "schema",
-  "rule": "one-target-key",
-  "reference_finding": "both targets and repositories"
-}

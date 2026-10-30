@@ -17,7 +17,10 @@ With --reference PATH, the checker also loads an implementation's op_spec.py
 (any module exposing validate(doc), OpSpecError and SCHEMA_STRING) and
 requires its verdict to match `conforms` on every case and example.
 `reference_finding` is informative: a mismatch is reported but not counted
-as a failure, because finding text is not normative.
+as a failure, because finding text is not normative. A case whose
+expected.json carries `reference_divergence` records a known difference
+between this profile and the reference; a mismatch on it is reported as a
+note, and so is a match, so the field is removed once the reference agrees.
 
 Exit codes: 0 every check passed, 1 at least one failed, 2 usage error.
 """
@@ -58,10 +61,14 @@ def load_reference(path):
 def reference_verdict(module, doc):
     """(conforms, problems) from the reference implementation. A reference
     that implements this profile's vocabulary under an earlier schema string
-    is checked by substituting its own string for this profile's."""
+    is checked by substituting its own string for this profile's, and by
+    reading `title` as that version's `name`."""
     doc = copy.deepcopy(doc)
-    if isinstance(doc, dict) and doc.get("schema") == PROFILE_SCHEMA_STRING:
+    if (isinstance(doc, dict) and doc.get("schema") == PROFILE_SCHEMA_STRING
+            and module.SCHEMA_STRING != PROFILE_SCHEMA_STRING):
         doc["schema"] = module.SCHEMA_STRING
+        if "title" in doc and "name" not in doc:
+            doc["name"] = doc.pop("title")
     try:
         module.validate(doc)
     except module.OpSpecError as exc:
@@ -107,11 +114,17 @@ def main():
                             f"move it to layer 'schema'")
         if reference is not None:
             conforms, problems = reference_verdict(reference, doc)
-            if conforms != expected["conforms"]:
+            divergence = expected.get("reference_divergence")
+            if divergence and conforms != expected["conforms"]:
+                notes.append(f"{name}: known divergence: {divergence}")
+            elif divergence:
+                notes.append(f"{name}: the reference now agrees; remove "
+                             f"reference_divergence")
+            elif conforms != expected["conforms"]:
                 failures.append(f"{name}: reference says conforms={conforms}, "
                                 f"expected {expected['conforms']}"
                                 + (f": {problems[0]}" if problems else ""))
-            finding = expected.get("reference_finding")
+            finding = None if divergence else expected.get("reference_finding")
             if finding and not any(finding in p for p in problems):
                 notes.append(f"{name}: reference finding text differs "
                              f"(expected to contain {finding!r}; got "

@@ -1,0 +1,6 @@
+{
+  "conforms": false,
+  "layer": "profile",
+  "rule": "cycle-restart-declared",
+  "reference_finding": "restart must name a declared step"
+}

@@ -1,7 +1,7 @@
 schema: openteams/op-manifest [0.2]
 id: example.org/op-conformance
 version: 0.1.0
-name: Conformance case
+title: Conformance case
 inputs:
 - name: texts
   required: true
@@ -17,6 +17,5 @@ steps:
   input:
     texts:
       $from: inputs.texts
-    labelled:
-      $from: inputs.texts
-      label: texts
+    limit:
+      $default: 10
