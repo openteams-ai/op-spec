@@ -27,7 +27,9 @@ Schema cannot see. A new rule needs a case; a case moves from `profile` to
 python tools/check_conformance.py [--reference path/to/op_spec.py]
 ```
 
-With `--reference`, an implementation that implements this vocabulary under the
+With `--reference`, an implementation that accepts `[0.2]` itself (its
+`SCHEMA_STRING`, or its `SCHEMA_STRINGS`, includes it) is given each document
+as written. One that implements this vocabulary only under the
 earlier identifier `[0.1]` is checked by substituting its identifier for
 `[0.2]` and reading `title` as that version's `name`, at the top level and
 on every step, including the steps a cycle transition prepares. Its verdict must match

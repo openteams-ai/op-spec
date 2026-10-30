@@ -15,7 +15,11 @@ catch.
 
 With --reference PATH, the checker also loads an implementation's op_spec.py
 (any module exposing validate(doc), OpSpecError and SCHEMA_STRING) and
-requires its verdict to match `conforms` on every case and example.
+requires its verdict to match `conforms` on every case and example. A
+reference that implements this profile — one whose SCHEMA_STRING, or whose
+SCHEMA_STRINGS list, includes `openteams/op-manifest [0.2]` — is given each
+document as written; any other is given it translated to its own identifier
+(see reference_verdict).
 `reference_finding` is informative: a mismatch is reported but not counted
 as a failure, because finding text is not normative. A case whose
 expected.json carries `reference_divergence` records a known difference
@@ -58,15 +62,25 @@ def load_reference(path):
     return module
 
 
+def implements_profile(module):
+    """True when the reference accepts this profile's identifier itself:
+    its SCHEMA_STRING is it, or its SCHEMA_STRINGS (every identifier it
+    runs) include it."""
+    strings = getattr(module, "SCHEMA_STRINGS", None) or ()
+    return (module.SCHEMA_STRING == PROFILE_SCHEMA_STRING
+            or PROFILE_SCHEMA_STRING in strings)
+
+
 def reference_verdict(module, doc):
     """(conforms, problems) from the reference implementation. A reference
-    that implements this profile's vocabulary under an earlier schema string
-    is checked by substituting its own string for this profile's, and by
+    that implements this profile is given the document as written. One that
+    implements this profile's vocabulary under an earlier schema string is
+    checked by substituting its own string for this profile's, and by
     reading `title` as that version's `name`, at the top level and on every
     step, including the steps a cycle transition prepares."""
     doc = copy.deepcopy(doc)
     if (isinstance(doc, dict) and doc.get("schema") == PROFILE_SCHEMA_STRING
-            and module.SCHEMA_STRING != PROFILE_SCHEMA_STRING):
+            and not implements_profile(module)):
         doc["schema"] = module.SCHEMA_STRING
         for item in [doc] + steps_of(doc):
             if isinstance(item, dict) and "title" in item and "name" not in item:
@@ -181,7 +195,10 @@ def main():
     for failure in failures:
         print(f"FAIL: {failure}")
     print(f"{checked} checked, {len(failures)} failed"
-          + (f", compared with {args.reference}" if reference else ""))
+          + (f", compared with {args.reference}"
+             + (" as written" if implements_profile(reference)
+                else f" translated to {reference.SCHEMA_STRING!r}")
+             if reference else ""))
     return 1 if failures else 0
 
 
