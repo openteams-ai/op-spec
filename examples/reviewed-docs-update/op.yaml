@@ -1,5 +1,5 @@
 schema: openteams/op-manifest [0.2]
-id: example.org/op-reviewed-docs-update
+id: example.org/reviewed-docs-update
 version: "0.1.0"
 title: Reviewed documentation update
 description: Reads pages, proposes edits, and writes only the edits a person approves.

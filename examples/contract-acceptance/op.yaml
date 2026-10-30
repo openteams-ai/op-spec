@@ -1,5 +1,5 @@
 schema: openteams/op-manifest [0.2]
-id: example.org/op-contract-acceptance
+id: example.org/contract-acceptance
 version: "0.1.0"
 title: Contract acceptance
 description: Drafts a Cog contract, pauses for a person to accept it, then authors source bound to the accepted contract.

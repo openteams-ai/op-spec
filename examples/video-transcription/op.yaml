@@ -1,5 +1,5 @@
 schema: openteams/op-manifest [0.2]
-id: example.org/op-video-transcription
+id: example.org/video-transcription
 version: "0.1.0"
 title: Video transcription with speaker attribution
 description: Produces a timestamped, speaker-labelled transcript from a recording.
