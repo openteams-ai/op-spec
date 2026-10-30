@@ -557,7 +557,11 @@ is the document without its `cycle`.
   passed, its Cog's package digest is unchanged, and, if it has a human Gate,
   its decision accepted an artifact. A step behind a human Gate over changes
   is therefore never carried. A transition whose carried steps do not meet
-  these conditions is refused.
+  these conditions cannot continue: the cycle ends `cycle-failed`, recording
+  the reason and the phase, outcome, and restart step involved. A cycle that
+  cannot start its first phase, or whose phase cannot be run, ends the same
+  way. A `cycle-failed` cycle is final; resuming it reports it and runs
+  nothing. An interrupted cycle is not failed: it stays resumable.
 - **Previous phase.** `cycle_previous` gives the next phase the previous
   phase's step requests, payloads, envelopes, and decisions.
 - **Budgets.** `max_attempts` counts phases, the first included. Every
@@ -621,7 +625,7 @@ and an effectful Cog is never invoked twice. This retry is deprecated; see
 |---|---|
 | A step | `passed`, `passed-with-problems`, `failed`, `skipped`, `blocked`, `denied`, `not-reached`, `awaiting-decision`, `rejected`, `running`, `planned` (a dry run), `budget-exhausted` (in a cycle) |
 | A run | `planned`, `running`, `paused`, `completed`, `completed-with-problems`, `failed`, `rejected`, and in a cycle's phase `cycle-transition` and `budget-exhausted` |
-| A cycle | `running`, `paused`, `completed`, `completed-with-problems`, `failed`, `rejected`, `refused`, `budget-exhausted` |
+| A cycle | `running`, `paused`, `completed`, `completed-with-problems`, `failed` (a phase failed; resumable), `rejected`, `refused`, `budget-exhausted`, `cycle-failed` (the cycle itself cannot continue; final) |
 
 ### Exit codes
 
@@ -630,7 +634,7 @@ Stdout is one JSON object.
 | Code | Meaning |
 |---|---|
 | `0` | Completed, completed with problems, or a planned dry run |
-| `1` | Failed, rejected, refused, or budget exhausted |
+| `1` | Failed, rejected, refused, budget exhausted, or cycle failed |
 | `2` | Refused before a run directory exists: an invalid document, request, admission, or decision; a run another process holds; a dry run that cannot evaluate its request |
 | `3` | Paused for a human decision |
 | `4` | Used only between a phase run and its cycle: the phase ended in a transition. A cycle never exits `4` |
