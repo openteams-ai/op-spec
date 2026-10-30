@@ -1,0 +1,46 @@
+{
+  "envelope": 1,
+  "cog": {
+    "id": "example.org/cog-author",
+    "version": "0.1.0"
+  },
+  "task": "prepare-revision",
+  "ok": false,
+  "error": {
+    "code": "invocation-failed",
+    "detail": "the Cog exited 1 after writing an envelope",
+    "evidence": {
+      "command": [
+        "pixi",
+        "run",
+        "--manifest-path",
+        "../cog-author/pixi.toml",
+        "prepare-revision",
+        "--",
+        "--request",
+        "requests/revision-request.json"
+      ],
+      "returncode": 1,
+      "stdout_tail": "{\"envelope\": 1, ...}",
+      "stderr_tail": "",
+      "envelope": {
+        "envelope": 1,
+        "cog": {
+          "id": "example.org/cog-author",
+          "version": "0.1.0"
+        },
+        "task": "prepare-revision",
+        "ok": false,
+        "error": {
+          "code": "invalid-revision",
+          "detail": "the review names no finding the revision can address"
+        },
+        "payload": null,
+        "problems": []
+      }
+    }
+  },
+  "payload": null,
+  "raw": null,
+  "problems": []
+}

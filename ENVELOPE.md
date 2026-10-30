@@ -50,6 +50,11 @@ result:
   never the Cog's.
 - **`problems`** — a list of objects, possibly empty. See [Problems](#problems).
 
+A consumer MUST also treat as malformed an `error` that is neither `null` nor
+`{code, detail}`, an `ok: true` beside an `error` object, and a problem that is
+not `{check, detail, severity}` as [Problems](#problems) defines it. A
+malformed problem is never read as a warning.
+
 ### Required of a producing Cog
 
 A Cog MUST also emit:
@@ -92,10 +97,12 @@ invocation, whether or not it recognizes the code.
 
 ### Synthesized envelopes
 
-When a Cog cannot be launched, exits without a well-formed envelope, or writes
-something that is not envelope 1, the runner synthesizes an envelope with
-`ok: false`, `error.code: invocation-failed`, and the process evidence in one
-place, `error.evidence`:
+When a Cog cannot be launched, exits without a well-formed envelope, writes
+something that is not envelope 1, or exits nonzero, the runner synthesizes an
+envelope with `ok: false`, `error.code: invocation-failed`, and the process
+evidence in one place, `error.evidence`. A process that exits nonzero has
+failed even when it wrote a well-formed envelope. A synthesized envelope is
+itself envelope 1:
 
 ```json
 {"command": ["..."], "returncode": 1, "stdout_tail": "...", "stderr_tail": "...",
@@ -104,18 +111,24 @@ place, `error.evidence`:
 
 Each tail is at most the last 2,000 characters of the stream. `returncode` is
 `null` only when the command could not be launched. `previous_attempts` is
-present when the runner tried another invocation form first. The Gate decides
-about a synthesized envelope like any other.
+present when the runner tried another invocation form first.
+
+A JSON object the Cog did print — a malformed envelope, or a well-formed one
+from a process that exited nonzero — is kept whole as
+`error.evidence.envelope`, so the Cog's own error code stays readable. `raw`
+holds only text, or `null`. The Gate decides about a synthesized envelope like
+any other.
 
 ## Problems
 
 A problem is `{check, detail, severity}`:
 
-- `check` — a machine-readable category: `schema`, `grounding`, `citation`,
-  `identity`, `input`, or another the Cog defines.
+- `check` — a non-empty, machine-readable category: `schema`, `grounding`,
+  `citation`, `identity`, `input`, or another the Cog defines.
 - `detail` — one human sentence.
-- `severity` — `error` or `warning`. `warn` is accepted as a spelling of
-  `warning` and is deprecated.
+- `severity` — `error` or `warning`. `warn` is accepted as a deprecated
+  spelling of `warning`; a later envelope version will not accept it, so a
+  Cog SHOULD write `warning`.
 
 Problems are the Cog checking its **own** declared contract. An independent
 Guard verifies against the system's requirements and never treats this
