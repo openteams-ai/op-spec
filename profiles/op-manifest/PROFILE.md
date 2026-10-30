@@ -7,12 +7,14 @@
 **Reference implementation:** Cog Smith Op machinery 0.9.3
 ([cogcloud-ai/cog-smith](https://github.com/cogcloud-ai/cog-smith) at
 `c700f66`), which accepts this vocabulary under the earlier identifier
-`openteams/op-manifest [0.1]` — see [Versions](#versions).
+`openteams/op-manifest [0.1]` — see [Versions](#versions). Where `[0.2]` is
+stricter than the reference, [Tightenings](#tightenings) says so.
 
 This profile defines `op.yaml`: a closed, declarative vocabulary for an Op whose
 every step invokes a Cog. Anything the vocabulary does not carry is refused
 **by name when the document loads**, so an author never discovers a missing
-construct mid-run.
+construct mid-run. A refusal SHOULD say what is refused and why; it never
+names a plan or a version that might allow it later.
 
 The structural rules are in
 [op-manifest-0.2.schema.json](op-manifest-0.2.schema.json). Rules that relate
@@ -29,13 +31,34 @@ below. The key words MUST, SHOULD, and MAY are used as in RFC 2119.
 | `openteams/op-manifest [0.2]` | This document: the 0.9.3 vocabulary, written down, with the tightenings below. |
 
 A runner implementing `[0.2]` MAY also accept a `[0.1]` document that uses only
-`[0.2]` vocabulary, and SHOULD report that it read it as `[0.2]`.
+`[0.2]` vocabulary, reading its top-level `name` as `title`, and SHOULD report
+that it read it as `[0.2]`.
 
-**Tightenings.** The reference implementation accepts, and `[0.2]` refuses:
-`id`, `version`, or `name` that is not a string (any non-empty value is accepted
-today); a non-string `description`, step `name`, or `expected_outcome`; a
-non-boolean `inputs[].required`; a `track.records` that is not a list of
-strings; and an empty top-level `authority: {}` beside a `cycle`.
+### Tightenings
+
+The reference implementation (machinery 0.9.3) accepts, and `[0.2]` refuses:
+
+- `id`, `version`, or `title` that is not a string; a non-string
+  `description`, step `name`, or `expected_outcome`; a non-boolean
+  `inputs[].required`; a `track.records` that is not a list of strings; and an
+  empty top-level `authority: {}` beside a `cycle`.
+- A step whose `cog` states no `version`.
+- `repositories`, the former name of `targets`.
+- A requirement whose `action` is neither `read` nor `write`.
+- An object holding an operator key beside other keys, such as
+  `{$from: x, label: y}` or a `$default` without `$from`.
+- A `$path` value that begins with `~`.
+- A `$run_dir` that names the run directory itself, or `requests`,
+  `envelopes`, or `input-request.json`.
+- A `foreach` step with a human Gate over changes.
+
+At run time, `[0.2]` also requires what the reference treats as a warning or
+does not check: a stated `cog.version` that differs from the Cog's is an
+error; a named Cog that is not present when the run starts is an error; and an
+envelope whose `cog.id` differs from the step's is a failed invocation.
+
+The conformance corpus marks each case where the reference differs with
+`reference_divergence`.
 
 ## The package
 
@@ -43,7 +66,7 @@ An Op package following this profile is:
 
 ```text
 op-my-workflow/
-├── OP.md                 # the core entry file, manifest: op.yaml
+├── OP.md                 # the core entry file: manifest: op.yaml
 ├── op.yaml               # this profile's manifest
 ├── pixi.toml             # tasks: op, test (and cycle, when the Op declares one)
 ├── examples/request.json # a runnable request
@@ -59,9 +82,9 @@ implementation chooses; the reference implementation copies its runner into
 
 ```yaml
 schema: openteams/op-manifest [0.2]
-id: example.org/op-video-transcription
+id: example.org/video-transcription
 version: "0.1.0"
-name: Video transcription with speaker attribution
+title: Video transcription with speaker attribution
 description: Produces a timestamped, speaker-labelled transcript from a recording.
 inputs:  [...]
 steps:   [...]
@@ -74,20 +97,32 @@ track:   {records: [...]}
 | `schema` | yes | Exactly `openteams/op-manifest [0.2]` |
 | `id` | yes | Namespaced identity of this Op |
 | `version` | yes | The Op's own revision, quoted |
-| `name` | yes | Human-readable name |
+| `title` | yes | Human-readable name |
 | `description` | no | One-paragraph account |
 | `inputs` | no | Ordered list of declared inputs |
 | `steps` | yes | Non-empty ordered list of steps |
 | `outputs` | no | Object of mapping expressions: what the run returns |
-| `track` | no | `{records: [...]}` — see [Review](#open-for-review) |
+| `track` | no | Deprecated; accepted and ignored — see [Outputs and Track](#outputs-and-track) |
 | `authority` | no | `{ttl_minutes}`: how long an issued grant stays valid, default 60 |
 | `cycle` | no | A bounded declarative cycle; see [Cycles](#cycles) |
 
 Every other key is refused. `state` is refused by name: durable state across
 runs is not in this profile.
 
-When `OP.md` and `op.yaml` both state a name, version, or description, they
-SHOULD agree; a profile-aware validator SHOULD report disagreement.
+### Identity
+
+`id` is the Op's identity. `OP.md`'s `name` is its short form, and `title` is
+for people:
+
+- **`op-md-name-from-id`** — `OP.md`'s `name` SHOULD equal the last
+  `/`-separated segment of `id`: `example.org/video-transcription` is named
+  `video-transcription`.
+- **`op-md-version-agrees`** — when `OP.md` states a `version`, it MUST equal
+  `op.yaml`'s `version`.
+- `OP.md`'s `description` and `op.yaml`'s `title` and `description` are not
+  compared.
+
+A profile-aware validator SHOULD report a disagreement it can detect.
 
 ## Inputs
 
@@ -106,6 +141,9 @@ An input is `{name, description, required, default, schema}`; only `name` is
 required.
 
 - **`unique-inputs`** — input names are unique.
+- **`declared-request-keys`** — a request carrying a key that names no
+  declared input is refused.
+- `required` defaults to `true`.
 - **`input-schema-valid`** — a declared `schema` is a valid JSON Schema
   (2020-12), checked at load.
 - An input is **supplied** when the request carries its key; an explicit
@@ -165,16 +203,15 @@ about.
 
 ### The Cog a step names
 
-`cog.id`, `cog.source`, and `cog.task` are required strings; `cog.version` is
-optional.
+`cog.id`, `cog.version`, `cog.source`, and `cog.task` are required strings
+(**`cog-version-required`**).
 
 - `source` is a filesystem path to the Cog's package directory, relative to the
   Op package root. This is the only reference form in `[0.2]`; registry
   references are an [open design question](../../design-history/README.md).
 - `task` MUST name an interface the Cog declares for the **usage** audience.
 - `id` MUST equal the identity the Cog's manifest declares.
-- `version`, when stated, SHOULD equal the version the Cog's manifest declares;
-  a mismatch is a warning.
+- `version` MUST equal the version the Cog's manifest declares.
 
 These are checked against the Cog itself; see
 [Checks against the named Cogs](#checks-against-the-named-cogs).
@@ -183,15 +220,15 @@ These are checked against the Cog itself; see
 
 A step's `input`, a `foreach.items`, an artifact Gate's `artifact`, a
 requirement's `targets` and `changes`, the `outputs`, and a cycle's limits are
-**mapping expressions**. An object is an operator only when its key set is
-**exactly** one of these; every other object is ordinary data and is walked
-recursively, and scalars are literals.
+**mapping expressions**. An object whose key set is **exactly** one of these
+is that operator. An object with no `$`-prefixed key is ordinary data and is
+walked recursively, and scalars are literals.
 
 | Operator | Value |
 |---|---|
 | `{$from: PATH}` | The value at PATH; an error if it is not available |
 | `{$from: PATH, $default: EXPR}` | The value at PATH when present and not null, else EXPR |
-| `{$path: EXPR}` | EXPR as an absolute filesystem path, resolved against the request file's directory |
+| `{$path: EXPR}` | EXPR as an absolute filesystem path: a relative value is resolved against the request file's directory, and symbolic links are resolved |
 | `{$run_dir: SUBPATH}` | A directory inside this run, created; SUBPATH may itself be an expression |
 | `{$stem: EXPR}` | The final path component of EXPR without its suffix |
 | `{$literal: ANY}` | ANY verbatim — the escape for data that looks like an operator |
@@ -199,11 +236,20 @@ recursively, and scalars are literals.
 
 - **`closed-operators`** — a `$`-prefixed key that names no operator is refused
   wherever it appears, with or without siblings.
+- **`operator-exact-keyset`** — an object holding an operator key has exactly
+  that operator's key set. `{$from: x, label: y}` and a `$default` without
+  `$from` are refused rather than read as data, so a misspelled sibling
+  (`default:` for `$default:`) is an error. Data that needs `$`-prefixed keys
+  is written with `$literal`.
+- **`path-no-home`** — a `$path` value never begins with `~`: an Op's paths do
+  not depend on whose machine runs it. A literal is refused at load and a
+  computed value at evaluation.
+- `$path` and `$stem` give `null` for `null`.
 
 ### Paths
 
 A PATH is a dotted string. Dotted keys index objects; integer segments index
-arrays. Its root is one of:
+arrays, and a negative integer counts from the end. Its root is one of:
 
 | Root | Meaning |
 |---|---|
@@ -227,9 +273,17 @@ absolute values, `..` escapes, and symbolic links out of the run are refused
 before anything is created, including when the subpath arrived as mapped data.
 No component may be a symbolic link.
 
+- **`run-dir-not-root`** — the subpath names a directory inside the run, never
+  the run directory itself: `""`, `.`, `null`, and anything that normalizes to
+  the run root are refused.
 - **`run-dir-reserved`** — after normalization, the subpath must not name or
-  lie under the run's control entries: `grants`, `pending`, `decisions`,
-  `journal`, `run.lock`, `track.json`.
+  lie under the run's own entries: `grants`, `pending`, `decisions`,
+  `journal`, `requests`, `envelopes`, `input-request.json`, `run.lock`,
+  `track.json`, nor the `<file>.<pid>.tmp` siblings the runner rewrites
+  `input-request.json`, `run.lock`, and `track.json` through.
+
+A literal subpath is checked at load; a computed one when it is evaluated,
+before anything is created.
 
 ### Canonical digest
 
@@ -249,6 +303,10 @@ foreach: {items: {$from: inputs.github_items}, as: item}
 root inside the step. `as` must not be `inputs`, `steps`, `run`, or `request`
 (**`loop-variable-name`**).
 
+- **`changes-gate-not-per-element`** — a `foreach` step has no human Gate over
+  changes: a person decides about one list of changes, and a `foreach`
+  payload is a list of element payloads.
+
 Elements run in order, each with its own request, envelope, and Gate decision.
 The step's payload is the list of element payloads, `null` where an element
 failed. The loop stops at the first element that finally fails; later elements
@@ -261,10 +319,16 @@ lines up with `items`.
 repeat: {count: 4, require: 1, mode: until-required}
 ```
 
-The same request is invoked up to `count` times (1–5). `require` (1–`count`,
-**`repeat-require-bounds`**) is how many must pass, and defaults to `count` only
-when omitted. `mode` is `all` (default: run every repeat and return every
-answer) or `until-required` (stop once `require` have passed).
+The same request is put to the Cog in up to `count` slots (1–5). `require`
+(1–`count`, **`repeat-require-bounds`**) is how many must pass, and defaults to
+`count` only when omitted. `mode` is `all` (default: run every slot and return
+every answer) or `until-required` (stop once `require` have passed).
+
+- Under `all`, `on_fail: retry-once` applies to each slot, so a step can make
+  up to twice `count` invocations. Under `until-required`, `retry-once` is not
+  applied: the next slot is the retry.
+- The payload is a list of slot payloads, `null` for a slot that failed. Under
+  `until-required` it lists only the slots that ran.
 
 The step's Gate fails when fewer than `require` repeats passed; otherwise it is
 `pass-with-problems` when any repeat failed or carried problems; otherwise
@@ -286,25 +350,34 @@ gate: {policy: envelope-ok-no-error-problems}
 | `envelope-ok-no-error-problems` (default) | The envelope is `ok` and carries no error-severity problem. Warnings give `pass-with-problems`. |
 | `human` | The envelope passes the default policy **and** a person then accepts. |
 
-`gate.guards` must be absent or empty (**`no-guards`**): Guards are supplied
-by a hosting environment and are not in this profile. `decides` and `artifact`
-belong only to a human Gate (**`decides-human-only`**).
+`gate.guards` is deprecated: it is accepted only absent or empty
+(**`no-guards`**) and is ignored. The name stays reserved for Guards, which a
+hosting environment supplies and this profile does not define. `decides` and
+`artifact` belong only to a human Gate (**`decides-human-only`**).
 
 ### A human Gate over changes
 
 `gate: {policy: human}` (or `decides: changes`). The step's payload carries a
-`changes` list; each change has a `change_id`, a `content_sha256` (the
-canonical digest of the change object without its two hash fields), and a
-`target_sha256` (the digest of the target as the Op read it). The runner
-refuses a change whose stated digests are missing, malformed, or wrong; it never
-repairs a hash.
+`changes` list; each change has a unique `change_id`, the `target` it changes,
+a `content_sha256` (the canonical digest of the change object without its two
+hash fields), and a `target_sha256` (the digest of the target as the Op read
+it). Proposals the Gate cannot put to a person — no `changes` list, a
+duplicate `change_id`, or a stated digest that is missing, malformed, or
+wrong — are a failed Gate: no pending decision is written, and `on_fail`
+applies. The runner never repairs a hash.
 
-The person gives every change exactly one verdict: `approve`, `reject`, `edit`
-(with the edited change, re-hashed from its edited content), or — through the
-reference client — `defer`. The applied decision is exposed as
-`steps.<id>.decision`:
-`{approved, rejected, edited, history, decided_by, decided_at}`, where
-`approved` carries the effective change objects.
+The person gives every change exactly one verdict:
+
+- `approve` — the change as proposed;
+- `reject` — not written;
+- `edit` — with the edited change, re-hashed from its edited content. An edit
+  changes content only: it keeps the proposed change's keys and their types,
+  its `target`, and its `target_sha256`;
+- `defer` — neither approved nor rejected; not written by this run.
+
+The applied decision is exposed as `steps.<id>.decision`:
+`{approved, rejected, edited, deferred, history, decided_by, decided_at}`,
+where `approved` carries the effective change objects.
 
 ### A human Gate over an artifact
 
@@ -328,27 +401,46 @@ Gate cannot state, or a digest that is not a SHA-256, is a failed Gate, never a
 pause asking someone to accept nothing.
 
 The decision is one verdict, `accept` or `reject`, bound to both the payload
-and artifact digests. An accepted artifact is exposed as
+and artifact digests. A rejection states a non-empty `reason`. An accepted
+artifact is exposed as
 `{verdict, artifact, artifact_sha256, reason, decided_by, decided_at}`. A
 rejection ends the run, finally, for those bytes.
 
 ## `on_fail`
 
 - `stop` ends the run `failed` at this step.
-- `skip` records the step `skipped`, every step depending on it `blocked`, and
-  ends the run `completed-with-problems`.
+- `skip` records the step `skipped` and every step depending on it `blocked`,
+  and the run continues. A skipped single step's payload is `null`; a skipped
+  `foreach` step keeps the payloads of the elements that finished.
 - `retry-once` re-invokes exactly once, and only when the envelope was
   `ok: false`. An error-severity problem in an `ok` envelope is a judgement,
   not a glitch, and is never retried. Refused on an effectful step
   (**`effectful-no-retry`**).
 
+A step whose grant is denied is recorded `denied` and follows `on_fail` like a
+failed step. A run whose steps all finished ends `completed-with-problems` when
+any step is `passed-with-problems`, `skipped`, `blocked`, or `denied`, and
+`completed` otherwise.
+
 ## Authority
 
 A Cog that reaches outside the run declares `reaches` in its manifest, and runs
 only under a **grant** the runner issues immediately before invoking it. There
-are two sources of authority and no others: the run owner's **admission**
-(`openteams/op-authority [0.1]`), which names what may be read, and a **human
-decision**, the only thing that authorizes a write.
+are two sources of authority and no others:
+
+- the run owner's **admission** (`openteams/op-authority [0.1]`), which lists
+  the operations the run may perform: each a resource, an action, and the
+  targets it covers; and
+- a **human decision** at a Gate over changes, which approves exact changes.
+
+A **read** needs the admission: every target the step asks for is one the
+admission lists for that resource and action. A **write** — applying exactly
+the approved, content-addressed changes to their targets — needs both: the
+admission lists `write` on the resource, and every approved change's `target`
+is a write target the admission lists; and a person approved those changes.
+A run whose admission does not list an operation some step requires is
+refused before it starts. A grant the runner cannot issue is a denial, never a
+trimmed grant.
 
 ```yaml
 - id: write-docs
@@ -363,12 +455,14 @@ decision**, the only thing that authorizes a write.
 A step declares what it requires; it never grants itself anything. Each
 requirement is `{resource, action}` plus `targets` (for a read) or `changes`
 (for a write). `resource` and each target are opaque names that the admission,
-the step, and the Cog's `reaches` agree on.
+the step, the changes, and the Cog's `reaches` agree on.
 
-- **`read-names-targets`** — a non-write requirement names `targets`, not null,
+- **`read-or-write`** — `action` is `read` or `write`. Other effects, such as
+  publishing, sending, or deleting, are not in this profile.
+- **`read-names-targets`** — a read requirement names `targets`, not null,
   and declares no `changes`.
-- **`one-target-key`** — `repositories` is the deprecated name for `targets`; a
-  requirement states one of them.
+- **`targets-only`** — `repositories`, the former name of `targets`, is
+  refused.
 - **`write-reads-approved`** — a write's `changes` is exactly
   `{$from: steps.<id>.decision.approved}`.
 - **`write-needs-human-gate`** — that `<id>` has a human Gate over changes;
@@ -386,8 +480,13 @@ present it as one.
 
 ## Outputs and Track
 
-`outputs` is an object of mapping expressions evaluated after the last step.
-`track.records` lists what the Track records; see [Open for review](#open-for-review).
+`outputs` is an object of mapping expressions, evaluated after the last step
+and before the run is recorded complete.
+
+`track.records` is deprecated: it is accepted and ignored. What a Track records
+is fixed by this profile, not chosen by the Op, so that no Op can record less
+than [core principle 7](../../SPEC.md#what-every-execution-profile-keeps)
+requires.
 
 ## Cycles
 
@@ -408,39 +507,78 @@ cycle:
 
 `outcome_step` is a declared step and `outcome_field` a field of its payload;
 the field's value selects a transition. A transition is
-`{restart, prepare, replace}`: restart at a step that precedes the outcome step
-(**`cycle-restart-precedes-outcome`**), optionally run `prepare` steps first,
-and optionally `replace` the `input` and `depends_on` of restarted steps —
-nothing else about a step can change. `initial` is reserved.
+`{restart, prepare, replace}`: restart at an earlier step, optionally run
+`prepare` steps first, and optionally `replace` the `input` and `depends_on` of
+restarted steps — nothing else about a step can change. `initial` is reserved.
+Each **phase** is one run of the Op as a transition shapes it; the first phase
+is the document without its `cycle`.
 
-- Every expanded phase is itself a conforming document, validated before the
-  first invocation. A phase receives the reserved input `cycle_previous`.
+### Cycle rules
+
+- **`cycle-outcome-declared`** — `outcome_step` names a declared step, and
+  `outcome_field` is a non-empty string.
+- **`cycle-previous-reserved`** — no input is named `cycle_previous`; every
+  phase after the first receives it.
+- **`cycle-restart-declared`** — a transition's `restart` names a declared
+  step; **`cycle-restart-precedes-outcome`** — that step precedes the outcome
+  step, or is it.
+- **`cycle-replace-restarted-only`** — `replace` names only steps that run
+  again: the restart step and those after it.
+- **`cycle-phase-conforms`** — every expanded phase is itself a conforming
+  document, validated before the first invocation.
 - **`cycle-costs-complete`** — `costs` gives a non-negative integer for exactly
   every step of every phase. Costs are reservation units for declared
   invocations, not prices.
+- **`cycle-terminal-errors-declared`** — `terminal_errors` maps steps of some
+  phase to non-empty lists of distinct, non-empty envelope error codes.
+- **`cycle-limits-read-inputs`** — `max_attempts` and `max_cost_units` read
+  inputs only. They are evaluated once, when the cycle starts: `max_attempts`
+  must be a positive integer and `max_cost_units` a non-negative integer.
 - **`cycle-pure`** — a cycle Op declares no authority, top-level or on any
-  step, including preparation steps.
-- `max_attempts` and `max_cost_units` may read inputs only; they resolve once
-  and stay fixed.
-- `terminal_errors` maps steps to distinct envelope error codes that end the
-  cycle as `refused` rather than recoverable.
+  step, including preparation steps, and every Cog it names is present and
+  declares no `reaches` when the cycle starts.
+
+### Running a cycle
+
+- **Routing.** When the outcome step's Gate does not fail and its
+  `outcome_field` holds a transition's name, the phase ends there as
+  `cycle-transition` and the next phase starts. This is checked **before** the
+  outcome step's human Gate: a result routed back is never put to a person.
+  A value that names no transition lets the phase continue, through the human
+  Gate if there is one, and the cycle ends when that phase ends. This
+  precedence is a known exception to core principles 4 and 5; see
+  [Open for review](#open-for-review).
+- **Carried steps.** The steps before the restart step are not run again. Each
+  is carried into the next phase with its recorded result, and only when it
+  passed, its Cog's package digest is unchanged, and, if it has a human Gate,
+  its decision accepted an artifact. A step behind a human Gate over changes
+  is therefore never carried. A transition whose carried steps do not meet
+  these conditions is refused.
+- **Previous phase.** `cycle_previous` gives the next phase the previous
+  phase's step requests, payloads, envelopes, and decisions.
+- **Budgets.** `max_attempts` counts phases, the first included. Every
+  invocation reserves its step's cost before it is made; a phase that would
+  exceed either limit ends the cycle `budget-exhausted`, keeping every result.
+- **Terminal errors.** A failed step whose envelope error code is listed for
+  it in `terminal_errors` ends the cycle `refused` rather than recoverable,
+  reading the code the Cog reported when the runner synthesized the failure.
 
 ## Checks against the named Cogs
 
-A runner MUST make these checks for every named Cog that is present before it
-invokes any step, and refuse the run on any error. A validator SHOULD make them
-too. A Cog that is not present cannot be checked: that is a warning, and
-invoking it later is an invocation failure.
+A runner MUST make these checks for every named Cog before it invokes any
+step, and refuse the run on any error; a named Cog that is not present when the
+run starts is an error. A validator SHOULD make them too; a validator checking
+an Op before its Cogs exist reports a missing Cog as a warning.
 
 They read the Cog's manifest. In this draft the fields are those of the
 `openteams/cog-manifest [0.1]` profile (`id`, `version`, `kind`, `reaches`,
 `interfaces[].task`, `interfaces[].audience`); how these map onto the Cog Spec
 is an [open question](../../design-history/README.md).
 
-- The Cog declares the stated `id`, and the stated `version` (warning).
+- The Cog declares the stated `id` and the stated `version`.
 - `task` is a declared interface for the **usage** audience. An interface that
   declares no audience is `lifecycle` if its task is one of `resolve`, `use`,
-  `check`, `eval`, `test`, `bundle`, `serve`, and `usage` otherwise.
+  `check`, `eval`, `test`, `bundle`, or `serve`, and `usage` otherwise.
 - `authority` is only on a step whose Cog is `kind: code`.
 - Every requirement is covered by the Cog's `reaches`.
 - A step whose Cog declares `reaches` declares `authority.requires`.
@@ -456,8 +594,14 @@ pixi run --manifest-path <source>/pixi.toml <task> -- --request <request.json>
     [--grant <grant.json> --run-id <id> --journal <journal>]
 ```
 
-The Cog writes one envelope as a JSON object on stdout. Grant, run id, and
-journal travel **beside** the request, never inside it.
+The Cog writes its envelope as a JSON object on stdout; it may print other
+text before it. The runner takes the **last** JSON object on stdout that has an
+`envelope` key. Grant, run id, and journal travel **beside** the request, never
+inside it.
+
+The envelope's `cog.id` MUST equal the step's `cog.id`; an envelope naming
+another Cog is a failed invocation. The runner digests the Cog package
+immediately before each invocation and records it with the result.
 
 If the Cog's argument parser rejects `--request` by name — exit code 2, the
 diagnostic `unrecognized arguments: --request` on stderr, and no envelope on
@@ -465,27 +609,64 @@ stdout — the runner retries once with `--bundle`. Anything else is a result,
 and an effectful Cog is never invoked twice. This retry is deprecated; see
 [Open for review](#open-for-review).
 
-## Run behaviour (informative in this draft)
+## Runs
 
-The following is summarized from the reference implementation and is not yet
-normative text. Each item will become normative, be moved to an
-implementation note, or be dropped.
+### Statuses
 
-- **Step statuses:** `passed`, `passed-with-problems`, `failed`, `skipped`,
-  `blocked`, `denied`, `not-reached`, `awaiting-decision`, `rejected`,
-  `running`.
-- **Run exit codes:** `0` completed, completed-with-problems, or a planned dry
-  run; `1` failed or rejected; `2` invalid spec, request, admission, or
-  decision, or a run another process holds; `3` paused for a human. Stdout is
-  one JSON object.
-- **Pause and resume.** A human Gate writes `pending/<step>.json`
-  (`openteams/op-pending-decision [0.1]`) and exits 3. A resume with an
-  `openteams/op-decision [0.1]` document reloads the Track, re-checks that
-  `op.yaml` still hashes the same and that the named Cogs still pass their
-  checks, applies the decision, and continues. A passed step is never re-run. A
-  failed run resumes at its `failed_step`.
-- **Digests on every invocation.** The runner digests the Cog package
-  immediately before each invocation and records `cog_sha256` beside
+| Of | Statuses |
+|---|---|
+| A step | `passed`, `passed-with-problems`, `failed`, `skipped`, `blocked`, `denied`, `not-reached`, `awaiting-decision`, `rejected`, `running`, `planned` (a dry run), `budget-exhausted` (in a cycle) |
+| A run | `planned`, `running`, `paused`, `completed`, `completed-with-problems`, `failed`, `rejected`, and in a cycle's phase `cycle-transition` and `budget-exhausted` |
+| A cycle | `running`, `paused`, `completed`, `completed-with-problems`, `failed`, `rejected`, `refused`, `budget-exhausted` |
+
+### Exit codes
+
+Stdout is one JSON object.
+
+| Code | Meaning |
+|---|---|
+| `0` | Completed, completed with problems, or a planned dry run |
+| `1` | Failed, rejected, refused, or budget exhausted |
+| `2` | Refused before a run directory exists: an invalid document, request, admission, or decision; a run another process holds; a dry run that cannot evaluate its request |
+| `3` | Paused for a human decision |
+| `4` | Used only between a phase run and its cycle: the phase ended in a transition. A cycle never exits `4` |
+
+### Evaluation failures
+
+A mapping expression that cannot be evaluated once the run has started — a
+`$from` path that is not available and declares no `$default`, a
+`foreach.items` that is not a list, a `$run_dir` or `$path` operand refused at
+evaluation, a requirement whose targets cannot be read — fails the step. The
+step is recorded `failed`, with the reasons and whatever it had finished, such
+as a `foreach`'s earlier elements; the steps after it are `not-reached`; and the
+run is `failed`, with the Track's `reason` saying what could not be evaluated.
+`on_fail` does not apply: the fault is in the Op, not in a Cog's result.
+`outputs` that cannot be evaluated fail the run with every step keeping its
+status, `outputs` null, and no `failed_step`.
+
+### Pausing and resuming
+
+A human Gate writes `pending/<step>.json`
+(`openteams/op-pending-decision [0.1]`) and exits `3`. A resume with an
+`openteams/op-decision [0.1]` document reloads the Track, re-checks that
+`op.yaml` still hashes the same and that the named Cogs still pass their
+checks, applies the decision, and continues. A passed step is never re-run. A
+failed run resumes at its `failed_step`. A rejected run and a dry run are never
+resumed.
+
+### Decisions
+
+A decision document states the `run_id` and `step` it is about, the
+`payload_sha256` of the payload the person saw (the runner re-digests the
+pending payload and compares), a non-empty `decided_by`, and `decided_at` as an
+ISO 8601 timestamp. A decision about changes gives every proposed change
+exactly one verdict and names no other change; a decision about an artifact
+gives one verdict and the `artifact_sha256` it is about. A decision that does
+not meet these is refused and nothing is applied.
+
+### Other run behaviour (informative)
+
+- **Digests on every invocation.** `cog_sha256` is recorded beside
   `request_sha256`. A resume reuses an earlier answer only when both match.
 - **Repeat budgets are a ledger.** Attempts are reserved before they are
   invoked, survive crashes and resumes, and are renewed only by an explicit
@@ -504,19 +685,20 @@ guide describes all of this in full.
 
 ## Open for review
 
-These grew as needed and are kept in `[0.2]` so that existing Ops keep loading.
-Each is proposed for change in a later version; see
-[design-history](../../design-history/README.md) for the reasoning.
+These are kept in `[0.2]` as they work today, and each is proposed for review;
+see [design-history](../../design-history/README.md) for the reasoning.
 
-1. An object holding an operator key plus other keys (`{$from: x, label: y}`)
-   is silently ordinary data. A misspelled sibling (`default:` for `$default:`)
-   therefore changes meaning without an error.
-2. `track.records` is declared but does not change what the reference runner
-   records.
-3. `gate.guards` exists only to be empty.
-4. `repositories` as an alias for `targets`.
-5. The `--request`/`--bundle` retry.
-6. `warn` as a spelling of `warning` (in the envelope).
-7. `cog.version` is optional and a mismatch is only a warning.
-8. Audience inference from a fixed list of lifecycle task names.
-9. Cycle refusals are less specific than the rest of the profile's.
+1. **Cycle routing before the human Gate.** A transition is taken on the
+   outcome step's own payload field, before that step's human Gate, so a Cog's
+   output decides the route and a person never sees a result routed back. This
+   is an exception to core principles 4 and 5.
+2. `track.records` and `gate.guards`: deprecated, accepted and ignored.
+3. The `--request`/`--bundle` retry.
+4. `warn` as a spelling of `warning` in envelope 1.
+5. Audience inference from a fixed list of lifecycle task names.
+6. Retries in `repeat`: under `all`, `retry-once` applies per slot (up to twice
+   `count` invocations); under `until-required`, it is not applied.
+7. A skipped `foreach` step keeps its finished elements' payloads, while a
+   skipped single step's payload is `null`.
+8. The runner takes the last JSON object on stdout that has an `envelope` key,
+   rather than requiring stdout to be exactly one envelope.
