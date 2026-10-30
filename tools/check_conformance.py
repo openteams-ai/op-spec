@@ -62,13 +62,15 @@ def reference_verdict(module, doc):
     """(conforms, problems) from the reference implementation. A reference
     that implements this profile's vocabulary under an earlier schema string
     is checked by substituting its own string for this profile's, and by
-    reading `title` as that version's `name`."""
+    reading `title` as that version's `name`, at the top level and on every
+    step, including the steps a cycle transition prepares."""
     doc = copy.deepcopy(doc)
     if (isinstance(doc, dict) and doc.get("schema") == PROFILE_SCHEMA_STRING
             and module.SCHEMA_STRING != PROFILE_SCHEMA_STRING):
         doc["schema"] = module.SCHEMA_STRING
-        if "title" in doc and "name" not in doc:
-            doc["name"] = doc.pop("title")
+        for item in [doc] + steps_of(doc):
+            if isinstance(item, dict) and "title" in item and "name" not in item:
+                item["name"] = item.pop("title")
     try:
         module.validate(doc)
     except module.OpSpecError as exc:
@@ -77,6 +79,20 @@ def reference_verdict(module, doc):
             problems = [problems]
         return False, [str(p) for p in problems]
     return True, []
+
+
+def steps_of(doc):
+    """Every step a document declares: its steps, and the steps each cycle
+    transition prepares."""
+    steps = doc.get("steps")
+    found = list(steps) if isinstance(steps, list) else []
+    cycle = doc.get("cycle")
+    transitions = cycle.get("transitions") if isinstance(cycle, dict) else None
+    for transition in (transitions or {}).values() if isinstance(transitions, dict) else []:
+        prepare = transition.get("prepare") if isinstance(transition, dict) else None
+        if isinstance(prepare, list):
+            found.extend(prepare)
+    return found
 
 
 def schema_errors(validator, doc):

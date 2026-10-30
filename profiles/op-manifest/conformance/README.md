@@ -29,7 +29,8 @@ python tools/check_conformance.py [--reference path/to/op_spec.py]
 
 With `--reference`, an implementation that implements this vocabulary under the
 earlier identifier `[0.1]` is checked by substituting its identifier for
-`[0.2]` and reading `title` as that version's `name`. Its verdict must match
+`[0.2]` and reading `title` as that version's `name`, at the top level and
+on every step, including the steps a cycle transition prepares. Its verdict must match
 `conforms` on every case except one that carries `reference_divergence`; those
 are reported as notes, and a note also says when the reference has come to
 agree, so the field can be removed.

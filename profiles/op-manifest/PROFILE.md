@@ -31,7 +31,8 @@ below. The key words MUST, SHOULD, and MAY are used as in RFC 2119.
 | `openteams/op-manifest [0.2]` | This document: the 0.9.3 vocabulary, written down, with the tightenings below. |
 
 A runner implementing `[0.2]` MAY also accept a `[0.1]` document that uses only
-`[0.2]` vocabulary, reading its top-level `name` as `title`, and SHOULD report
+`[0.2]` vocabulary, reading its top-level `name` and each step's `name`
+(including the steps a cycle transition prepares) as `title`, and SHOULD report
 that it read it as `[0.2]`.
 
 ### Tightenings
@@ -39,9 +40,11 @@ that it read it as `[0.2]`.
 The reference implementation (machinery 0.9.3) accepts, and `[0.2]` refuses:
 
 - `id`, `version`, or `title` that is not a string; a non-string
-  `description`, step `name`, or `expected_outcome`; a non-boolean
+  `description`, step `title`, or `expected_outcome`; a non-boolean
   `inputs[].required`; a `track.records` that is not a list of strings; and an
   empty top-level `authority: {}` beside a `cycle`.
+- `name` at the top level or on a step, which `[0.2]` calls `title`. To
+  migrate, rename both; a `[0.1]` document is read with `name` as `title`.
 - A step whose `cog` states no `version`.
 - `repositories`, the former name of `targets`.
 - A requirement whose `action` is neither `read` nor `write`.
@@ -112,7 +115,8 @@ runs is not in this profile.
 ### Identity
 
 `id` is the Op's identity. `OP.md`'s `name` is its short form, and `title` is
-for people:
+for people. Steps follow the same pattern: a step's `id` identifies it and its
+`title` is for people, so `name` appears in `op.yaml` only for inputs.
 
 - **`op-md-name-from-id`** — `OP.md`'s `name` SHOULD equal the last
   `/`-separated segment of `id`: `example.org/video-transcription` is named
@@ -161,7 +165,7 @@ required.
 ```yaml
 steps:
   - id: attribute-speakers
-    name: Attribute transcript segments to speakers
+    title: Attribute transcript segments to speakers
     depends_on: [transcribe]
     cog:
       id: example.org/cog-speaker-attribution
@@ -179,7 +183,7 @@ steps:
 | Key | Meaning |
 |---|---|
 | `id` | Required. Lowercase alphanumerics and single hyphens |
-| `name`, `expected_outcome` | Human-readable; carried into the plan and Track |
+| `title`, `expected_outcome` | Human-readable; carried into the plan and Track |
 | `depends_on` | Step ids that must finish first |
 | `cog` | Required. `{id, version, source, task}` — see below |
 | `input` | A mapping expression that evaluates to the step's request |

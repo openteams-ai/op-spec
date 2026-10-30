@@ -78,8 +78,9 @@ version.
 
 **2026-10-30 — Identity is the manifest `id`.** `OP.md`'s `name` is the last
 segment of `id`, as a Cog's `COG.md` `name` is the last segment of its
-manifest's `id`. `op.yaml`'s human-readable `name` becomes `title`, so "name"
-means one thing. `version` must agree; descriptions are not compared. Rejected:
+manifest's `id`. `op.yaml`'s human-readable `name` becomes `title`, at the
+top level and on every step (including steps a cycle transition prepares), so
+an Op and its steps are each an `id` and a `title`, and "name" means one thing. `version` must agree; descriptions are not compared. Rejected:
 comparing `OP.md`'s `name` with a title, and adding `id` to `OP.md`, which
 would make `OP.md` differ from `COG.md`.
 

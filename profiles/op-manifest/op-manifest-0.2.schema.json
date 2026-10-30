@@ -66,7 +66,7 @@
       "additionalProperties": false,
       "properties": {
         "id": {"$ref": "#/$defs/stepId"},
-        "name": {"type": "string"},
+        "title": {"type": "string"},
         "depends_on": {"type": "array", "items": {"type": "string"}},
         "cog": {"$ref": "#/$defs/cogRef"},
         "foreach": {"$ref": "#/$defs/foreach"},
