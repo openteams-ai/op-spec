@@ -43,6 +43,11 @@ The reference implementation (machinery 0.9.3) accepts, and `[0.2]` refuses:
   `description`, step `title`, or `expected_outcome`; a non-boolean
   `inputs[].required`; a `track.records` that is not a list of strings; and an
   empty top-level `authority: {}` beside a `cycle`.
+- A present key of the wrong type that the reference reads as absent, such as
+  `inputs: {}`, `outputs: []`, `track: null`, `authority: null`, a step's
+  `depends_on`, `foreach`, `gate`, `authority`, or `repeat` of `null`,
+  `authority: {ttl_minutes: null}` (read as the default 60), or
+  `gate: {guards: false}`.
 - `name` at the top level or on a step, which `[0.2]` calls `title`. To
   migrate, rename both; a `[0.1]` document is read with `name` as `title`.
 - A step whose `cog` states no `version`.
@@ -113,6 +118,14 @@ track:   {records: [...]}
 
 Every other key is refused. `state` is refused by name: durable state across
 runs is not in this profile.
+
+- **`present-key-typed`** — a key that is present has the type the JSON Schema
+  gives it, at every level of the document. A value of another type is
+  refused, never read as the key's absence: `inputs: {}`, `outputs: []`,
+  `track: null`, and a step's `depends_on: null` are refused, as are
+  `authority: {ttl_minutes: null}` (**`ttl-positive`**) and
+  `gate: {guards: false}` (**`no-guards`**). Only an omitted key takes its
+  default.
 
 ### Identity
 

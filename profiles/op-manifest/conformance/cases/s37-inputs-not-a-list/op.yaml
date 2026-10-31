@@ -1,0 +1,16 @@
+schema: openteams/op-manifest [0.2]
+id: example.org/op-conformance
+version: 0.1.0
+title: Conformance case
+inputs: {}
+steps:
+- id: tally
+  cog:
+    id: example.org/cog-word-tally
+    version: 0.1.0
+    source: ../cog-word-tally
+    task: tally
+  input:
+    texts:
+    - a
+    - b

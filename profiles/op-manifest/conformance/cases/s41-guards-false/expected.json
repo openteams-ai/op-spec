@@ -1,0 +1,6 @@
+{
+  "conforms": false,
+  "layer": "schema",
+  "rule": "no-guards",
+  "reference_divergence": "Machinery 0.9.3 reads a false gate.guards as none; [0.2] accepts guards only as an empty list."
+}
