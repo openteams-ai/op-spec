@@ -53,7 +53,8 @@ The reference implementation (machinery 0.9.3) accepts, and `[0.2]` refuses:
 - A `$path` value that begins with `~`.
 - A `$run_dir` that names the run directory itself, or `requests`,
   `envelopes`, or `input-request.json`.
-- A `foreach` step with a human Gate over changes.
+- A `foreach` step with a human Gate over changes, or with a human Gate over
+  an artifact that reads the loop variable.
 
 At run time, `[0.2]` also requires what the reference treats as a warning or
 does not check: a stated `cog.version` that differs from the Cog's is an
@@ -311,9 +312,15 @@ root inside the step. `as` must not be `inputs`, `steps`, `run`, or `request`
 - **`changes-gate-not-per-element`** — a `foreach` step has no human Gate over
   changes: a person decides about one list of changes, and a `foreach`
   payload is a list of element payloads.
+- **`artifact-not-per-element`** — a human Gate over an artifact on a
+  `foreach` step is one decision over the whole step, so its `artifact`
+  never reads the loop variable: the Gate is evaluated after the loop, when
+  no element is current. It reads the step's payload instead.
 
-Elements run in order, each with its own request, envelope, and Gate decision.
-The step's payload is the list of element payloads, `null` where an element
+Elements run in order, each with its own request, envelope, and envelope Gate
+decision. When every element has finished, a human Gate over an artifact, if
+the step has one, puts one artifact to a person for the whole step. The
+step's payload is the list of element payloads, `null` where an element
 failed. The loop stops at the first element that finally fails; later elements
 are recorded `not-reached` and are `null` in the payload, so the list still
 lines up with `items`.

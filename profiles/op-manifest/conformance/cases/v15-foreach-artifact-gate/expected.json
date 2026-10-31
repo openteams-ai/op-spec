@@ -1,0 +1,6 @@
+{
+  "conforms": true,
+  "layer": null,
+  "rule": "artifact-not-per-element",
+  "note": "Each element has its own envelope Gate; the artifact Gate decides once about the list of element payloads."
+}
