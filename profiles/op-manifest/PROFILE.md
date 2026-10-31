@@ -202,7 +202,7 @@ steps:
 | `title`, `expected_outcome` | Human-readable; carried into the plan and Track |
 | `depends_on` | Step ids that must finish first |
 | `cog` | Required. `{id, version, source, task}` — see below |
-| `input` | A mapping expression that evaluates to the step's request |
+| `input` | A mapping expression that evaluates to the step's request, read as written whenever present (`false`, `0`, `""`, `null`, and `[]` included); omitted, the request is `{}` |
 | `foreach` | Run once per element; see [foreach](#foreach) |
 | `repeat` | Ask the same request several times; see [repeat](#repeat) |
 | `gate` | How the step's result is accepted; see [Gates](#gates) |
