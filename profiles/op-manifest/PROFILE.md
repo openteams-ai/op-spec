@@ -301,7 +301,12 @@ No component may be a symbolic link.
   lie under the run's own entries: `grants`, `pending`, `decisions`,
   `journal`, `requests`, `envelopes`, `input-request.json`, `run.lock`,
   `track.json`, nor the `<file>.<pid>.tmp` siblings the runner rewrites
-  `input-request.json`, `run.lock`, and `track.json` through.
+  `input-request.json`, `run.lock`, and `track.json` through. Names compare
+  case-insensitively, by Unicode canonical caseless matching, so `Requests`
+  and `GRANTS/x` are refused on every filesystem and the verdict does not
+  depend on whether the one that runs folds case. At evaluation, an existing
+  component that is the run directory or one of these entries under another
+  name, such as a hard link, is refused too.
 
 A literal subpath is checked at load; a computed one when it is evaluated,
 before anything is created.

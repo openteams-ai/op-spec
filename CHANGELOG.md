@@ -53,6 +53,10 @@ Initial public discussion draft.
 - The checker holds a reference that implements `[0.2]` to every case;
   `reference_divergence` excuses only a reference that predates it. The
   corpus has 11 new cases.
+- `run-dir-reserved` compares names case-insensitively, by Unicode canonical
+  caseless matching, so `$run_dir: Requests` is refused whether or not the
+  filesystem folds case; an existing alias of a reserved entry is refused at
+  evaluation. One new corpus case, `p31-run-dir-reserved-case`.
 - `op-md-version-agrees` compares a version as written: a stated `OP.md`
   `version` is a string, so `null` never agrees with `"None"`. The reference
   validator no longer coerces both sides with `str()`, and `pixi run check`
