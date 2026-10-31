@@ -23,8 +23,11 @@ document as written; any other is given it translated to its own identifier
 `reference_finding` is informative: a mismatch is reported but not counted
 as a failure, because finding text is not normative. A case whose
 expected.json carries `reference_divergence` records a known difference
-between this profile and the reference; a mismatch on it is reported as a
-note, and so is a match, so the field is removed once the reference agrees.
+between this profile and a reference that predates it; for such a reference
+a mismatch on it is reported as a note, and so is a match, so the field is
+removed once the reference agrees. The waiver never applies to a reference
+that implements this profile: it is held to every case exactly, so a
+regression in it cannot hide behind a note written for an older one.
 
 Exit codes: 0 every check passed, 1 at least one failed, 2 usage error.
 """
@@ -123,6 +126,10 @@ def main():
     validator = jsonschema.Draft202012Validator(
         json.loads(PROFILE_SCHEMA_PATH.read_text()))
     reference = load_reference(args.reference) if args.reference else None
+    # Only a reference that predates this profile may be excused by a case's
+    # reference_divergence: one that implements [0.2] states it implements
+    # every rule, so it must agree on every case.
+    waivable = reference is not None and not implements_profile(reference)
     failures, notes, checked = [], [], 0
 
     for case in sorted(p for p in CASES.iterdir() if p.is_dir()):
@@ -145,11 +152,11 @@ def main():
         if reference is not None:
             conforms, problems = reference_verdict(reference, doc)
             divergence = expected.get("reference_divergence")
-            if divergence and conforms != expected["conforms"]:
-                notes.append(f"{name}: known divergence: {divergence}")
-            elif divergence:
+            if divergence and conforms == expected["conforms"]:
                 notes.append(f"{name}: the reference now agrees; remove "
                              f"reference_divergence")
+            elif divergence and waivable:
+                notes.append(f"{name}: known divergence: {divergence}")
             elif conforms != expected["conforms"]:
                 failures.append(f"{name}: reference says conforms={conforms}, "
                                 f"expected {expected['conforms']}"
