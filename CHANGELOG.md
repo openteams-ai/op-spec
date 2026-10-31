@@ -57,6 +57,9 @@ Initial public discussion draft.
   caseless matching, so `$run_dir: Requests` is refused whether or not the
   filesystem folds case; an existing alias of a reserved entry is refused at
   evaluation. One new corpus case, `p31-run-dir-reserved-case`.
+- Evaluation failures exclude a human artifact Gate's expressions: an
+  artifact that cannot be evaluated is a failed Gate and follows `on_fail`,
+  so `skip` continues the run, as the reference does.
 - `op-md-version-agrees` compares a version as written: a stated `OP.md`
   `version` is a string, so `null` never agrees with `"None"`. The reference
   validator no longer coerces both sides with `str()`, and `pixi run check`

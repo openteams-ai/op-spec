@@ -429,8 +429,9 @@ The Gate declares ONE versioned thing — `kind` and `digests` required
 optional — evaluated after the step's Cog answered, so it may read the step's
 own payload but never its own decision (**`artifact-no-own-decision`**).
 `digests` is a non-empty object of named digest expressions. An artifact the
-Gate cannot state, or a digest that is not a SHA-256, is a failed Gate, never a
-pause asking someone to accept nothing.
+Gate cannot state — one whose expressions cannot be evaluated included — or a
+digest that is not a SHA-256, is a failed Gate, never a pause asking someone to
+accept nothing, and `on_fail` applies.
 
 The decision is one verdict, `accept` or `reject`, bound to both the payload
 and artifact digests. A rejection states a non-empty `reason`. An accepted
@@ -689,6 +690,12 @@ run is `failed`, with the Track's `reason` saying what could not be evaluated.
 `on_fail` does not apply: the fault is in the Op, not in a Cog's result.
 `outputs` that cannot be evaluated fail the run with every step keeping its
 status, `outputs` null, and no `failed_step`.
+
+A human artifact Gate's expressions are the exception. They are evaluated
+after the step's Cog answered, and an artifact the Gate cannot state is a
+failed Gate (see [A human Gate over an artifact](#a-human-gate-over-an-artifact)),
+so their evaluation failures, an unavailable `$from` included, follow the
+Gate's `on_fail`: with `skip`, the step is `skipped` and the run continues.
 
 ### Pausing and resuming
 
