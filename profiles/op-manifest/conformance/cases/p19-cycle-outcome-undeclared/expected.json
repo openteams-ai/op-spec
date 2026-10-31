@@ -1,0 +1,6 @@
+{
+  "conforms": false,
+  "layer": "profile",
+  "rule": "cycle-outcome-declared",
+  "reference_finding": "declared outcome step"
+}

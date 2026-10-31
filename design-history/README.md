@@ -65,33 +65,78 @@ names no single vocabulary.
 as needed, extraction includes review: constructs kept only so existing Ops
 still load are listed for change instead of being presented as design.
 
+**2026-10-30 — The draft was compared with the code.** The conformance corpus
+agreed with the reference validator, and every `op.yaml` in the public builder
+suite passed the `[0.2]` JSON Schema. No Op in the suite had an `OP.md`, and
+much of what a runner does was written only in code. The decisions below come
+from that comparison.
+
+**2026-10-30 — `[0.2]` stays open until it is implemented.** No runner
+implements `[0.2]` yet, so a tightening no existing Op relies on goes into
+`[0.2]` now. Changes that need existing Ops or Cogs to migrate wait for a later
+version.
+
+**2026-10-30 — Identity is the manifest `id`.** `OP.md`'s `name` is the last
+segment of `id`, as a Cog's `COG.md` `name` is the last segment of its
+manifest's `id`. `op.yaml`'s human-readable `name` becomes `title`, at the
+top level and on every step (including steps a cycle transition prepares), so
+an Op and its steps are each an `id` and a `title`, and "name" means one thing. `version` must agree; descriptions are not compared. Rejected:
+comparing `OP.md`'s `name` with a title, and adding `id` to `OP.md`, which
+would make `OP.md` differ from `COG.md`.
+
+**2026-10-30 — A write needs the admission and a person.** The run owner's
+admission sets what a run may ever write; a person approves the exact changes
+within it. A person's approval alone is not enough, because the person at a
+pause may not be the run owner, and an Op may come from someone else. A change
+names its `target`. Rejected: a human decision as the only authority for a
+write.
+
+**2026-10-30 — `read` and `write` only.** "Write" means applying exactly the
+approved, content-addressed changes to admitted targets. Every other action is
+refused until the effects an Op can have are classified (see
+[Open questions](#classifying-outside-effects)).
+
+**2026-10-30 — Runtime rules written down as they work.** Statuses, exit codes,
+cycle carry-over, decision documents, `on_fail` with denied steps, inputs, and
+mapping details are stated in the profile as the reference implements them.
+Where they are inconsistent, they are listed for review rather than redesigned.
+A runtime evaluation failure is a recorded failed step and run, as core
+principle 7 requires; the reference was changed to do so (machinery 0.10.0).
+
+**2026-10-30 — Identity is checked, not warned about.** `cog.version` is
+required and must match; a Cog missing when the run starts is an error; an
+envelope must name the step's Cog.
+
+**2026-10-30 — Review items settled for `[0.2]`.** Objects mixing operator keys
+with other keys are refused, and `$literal` carries such data. `repositories`
+is refused. `track.records` and `gate.guards` are accepted and ignored, and the
+reference stops generating them; "Guards" stays reserved. `warn` stays in
+envelope 1. Cycle refusals each have a named rule. A refusal says what is
+refused and why, never when. `$path` does not expand `~`. The `--request` /
+`--bundle` retry and audience inference from task names are written down as
+they work; declaring either belongs to
+[Op participation](#what-a-cog-must-declare-to-be-an-op-step).
+
 ## Proposed changes to the current profile
 
 Numbered as in the profile's [Open for review](../profiles/op-manifest/PROFILE.md#open-for-review).
 
-1. **Operator keys with siblings.** `{$from: x, label: y}` is ordinary data, so
-   `{$from: x, default: y}` (a typo for `$default`) silently stops being a read.
-   Proposal: refuse an object that mixes operator keys with other keys, and use
-   `$literal` for data that needs `$` keys.
-2. **`track.records`.** Declared, never acted on. Proposal: drop it, or make it
-   select what the Track records.
-3. **`gate.guards`.** Exists only to be empty. Proposal: drop it until Guards
-   are specified.
-4. **`repositories`.** Proposal: refuse it in the next profile version, with a
-   migration note.
-5. **`--request` / `--bundle`.** Two flags for one thing, inherited from two
-   machinery lineages. Proposal: one flag, declared by the Cog's interface,
-   with no retry.
-6. **`warn`.** Proposal: refuse it in the next envelope version.
-7. **`cog.version`.** Proposal: required, with mismatch an error — which the
-   registry-reference work below needs anyway.
-8. **Audience inference.** Proposal: interfaces declare their audience;
-   no name list.
-9. **Cycle refusals.** Proposal: refuse cycle mistakes by name, like everything
-   else.
-10. **Roadmap text in refusals.** The reference refuses `state:` by saying
-    "phase 4 adds it", which names an internal plan. Proposal: say what is
-    refused and why, not when.
+1. **Cycle routing before the human Gate.** See
+   [Routing as a Gate outcome](#routing-as-a-gate-outcome).
+2. **`track.records` and `gate.guards`.** Refuse both in the next profile
+   version. Guards, if they return, are supplied by a hosting environment.
+3. **`--request` / `--bundle`.** One flag, declared by the Cog's interface,
+   with no retry; see [Op participation](#what-a-cog-must-declare-to-be-an-op-step).
+4. **`warn`.** Refuse it in the next envelope version.
+5. **Audience inference.** Interfaces declare their audience; no name list.
+   Also part of Op participation.
+6. **Retries in `repeat`.** Make `retry-once` mean the same in both modes, or
+   refuse it beside `repeat`.
+7. **Partial payloads of skipped steps.** Decide whether a skipped `foreach`
+   step exposes its finished elements or `null`, as a single step does.
+8. **Envelope parsing.** Require stdout to carry exactly one envelope. Cogs
+   that print progress to stdout would have to move it to stderr, so this
+   needs a migration.
 
 ## Open questions
 
@@ -128,6 +173,88 @@ than `[tool.cog]`. One option: a small "Op participation" requirement in this
 repository, listing what a Cog's manifest must declare, in whatever profile, to
 be invoked as a step.
 
+Two review items belong here: which invocation flag an interface takes
+(replacing the `--request` / `--bundle` retry), and which audience an
+interface serves (replacing inference from task names). Both are things a Cog
+declares in order to take part in an Op, so they would be defined in this
+repository, as the envelope is, and would not change the Cog Spec.
+
+### Finalization
+
+*Under consideration; not decided.* A candidate organizing principle for the
+next profile version and the core:
+
+> Only a person finalizes. Machines may produce, check, route, revise, and
+> reject; they never finalize. Finalization is a person accepting an exact
+> result, identified by its digest. Anything later steps treat as accepted,
+> and any effect that leaves the run, comes from a finalization of exactly
+> that content; changed content needs a new finalization.
+
+It would explain the current design: an artifact Gate already takes digests,
+changes already carry `content_sha256` and `target_sha256`, an edit is already
+re-hashed, and an Op with no human Gate can return results but cause no
+outside effect. It would also make clear why a cycle may route a result back
+without a person (nothing is finalized) but may not accept one.
+
+**Decided (2026-10-30):** a policy a person approved in advance may stand in
+for that person. Each pass under it is recorded as finalized under that
+policy, citing the policy's digest, and never as a person's decision. This
+covers op-cog-builder's request for a caller policy that passes acceptance
+Gates on evidence
+([cogcloud-ai/op-cog-builder#3](https://github.com/cogcloud-ai/op-cog-builder/issues/3)).
+
+**Open, to be decided before the next profile version:**
+
+- Is every human acceptance a finalization, including one in the middle of a
+  run (a contract the rest of the run is bound to), or are there two levels: a
+  person steering at a checkpoint, and a person finalizing?
+- How a finalization is shown to come from a person. Today a decision is a
+  file with `decided_by`, and a runner cannot tell a person from a script that
+  wrote it. That is likely the hosting environment's to establish, as with
+  Guards, and the specification should not imply a runner enforces it.
+- Whether a finalization can be withdrawn before its effect is applied.
+
+### Routing as a Gate outcome
+
+*Under consideration; not decided.* In `[0.2]`, a cycle reads a field of the
+outcome step's payload and routes on it before the step's Gate. The Cog
+decides the route, an exception to "the Gate decides, never the Cog", and a
+person can never send a result back: an artifact Gate offers only `accept` and
+`reject`, and a rejection ends the cycle.
+
+The proposal: a Gate's result can be pass, fail, or a named route, and
+transitions are keyed on the Gate's result. The decider can be a declared
+machine rule that turns evidence (such as a review's classification) into a
+route, a person choosing accept, reject, or a route with a reason that reaches
+the next phase, or, later, an approved policy. One step may use more than one:
+a machine rule routing cheap rounds and a person deciding acceptance, as
+op-cog-builder's review step effectively does now. Whether a person sees every
+round would then be how an Op configures its Gate, not a special rule for
+cycles.
+
+Open: the vocabulary, how a person's reason reaches the next phase (a
+revision step that today reads a reviewer Cog's envelope would also read the
+person's decision), and how this relates to finalization.
+
+### Classifying outside effects
+
+*Under consideration; not decided.* In `[0.2]`, "write" is narrow: apply an
+exact, reviewed change set to admitted targets. Effects that are not a change
+set have no route yet. Three questions decide the route for an effect: can it
+be shown exactly in advance, can it be undone, and whose consent does it need
+— the run owner's in advance, a person's at the time, or both.
+
+| Effect | Shown in advance as | Reversible | A possible route |
+|---|---|---|---|
+| Read | Target names | — | Admission |
+| Change to a target | An exact diff | Usually | Admission, then a person approves the diff (`[0.2]` write) |
+| Routine change | Target and kind of change | Yes | Admission alone, declared in advance |
+| Publish, open a pull request, deploy | A digest of what goes out | Hard | Admission, then a person accepts the whole artifact |
+| Send, delete, spend | The exact action | No | Admission, then a person; never repeated |
+
+Publishing a Cog an Op built is the likely first case beyond `write`; see
+[Distribution and publishing](#distribution-and-publishing).
+
 ### Frames at the Op level
 
 The Frame Spec's account of the boundary says an Op names "which Frames apply
@@ -138,7 +265,8 @@ how an Op-level Frame reaches the Cogs.
 
 Admission, grant, pending decision, decision, Track, and cycle state each have
 an identifier and no specification. The Track is the most important: it is the
-record the core promises.
+record the core promises, and it comes first. Decision and admission documents
+follow; [finalization](#finalization) rests on them.
 
 ### Distribution and publishing
 

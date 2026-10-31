@@ -1,0 +1,6 @@
+{
+  "conforms": false,
+  "layer": "schema",
+  "rule": "ttl-positive",
+  "reference_divergence": "Machinery 0.9.3 reads a null ttl_minutes as the default 60; [0.2] refuses it."
+}

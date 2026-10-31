@@ -63,7 +63,7 @@ The reference implementation of the `op.yaml` profile is the Op machinery in
 With [Pixi](https://pixi.sh):
 
 ```bash
-pixi run check                         # corpus, examples, envelope fixtures
+pixi run check                         # corpus, examples, fixtures
 pixi run validate examples/video-transcription
 pixi run check-reference ../cog-smith/templates/op/src/op_spec.py
 ```

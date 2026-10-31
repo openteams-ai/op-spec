@@ -2,5 +2,5 @@
   "conforms": false,
   "layer": "schema",
   "rule": "required-identity",
-  "reference_finding": "missing required field 'name'"
+  "reference_finding": "missing required field"
 }

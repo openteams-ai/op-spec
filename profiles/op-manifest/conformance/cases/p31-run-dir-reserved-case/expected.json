@@ -1,0 +1,8 @@
+{
+  "conforms": false,
+  "layer": "profile",
+  "rule": "run-dir-reserved",
+  "reference_finding": "control entries",
+  "reference_divergence": "Machinery 0.9.3 compares reserved names case-sensitively and accepts this; [0.2] refuses it, as does machinery 0.11.0 under either profile.",
+  "note": "A filesystem that folds case opens the runner's requests directory for Requests."
+}

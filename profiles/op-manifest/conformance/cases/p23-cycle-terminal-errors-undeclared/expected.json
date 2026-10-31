@@ -1,0 +1,6 @@
+{
+  "conforms": false,
+  "layer": "profile",
+  "rule": "cycle-terminal-errors-declared",
+  "reference_finding": "terminal_errors maps declared steps"
+}

@@ -28,7 +28,7 @@ jobs:
         with:
           pixi-version: v0.69.0
           manifest-path: op-spec/pixi.toml
-      - name: Corpus, examples, and envelope fixtures
+      - name: Corpus, examples, and envelope and validator fixtures
         working-directory: op-spec
         run: pixi run check
       - name: Compare with the reference implementation
