@@ -55,6 +55,7 @@ The reference implementation (machinery 0.9.3) accepts, and `[0.2]` refuses:
   `envelopes`, or `input-request.json`.
 - A `foreach` step with a human Gate over changes, or with a human Gate over
   an artifact that reads the loop variable.
+- A cycle limit that reads `run` or `request`.
 
 At run time, `[0.2]` also requires what the reference treats as a warning or
 does not check: a stated `cog.version` that differs from the Cog's is an
@@ -546,8 +547,11 @@ is the document without its `cycle`.
 - **`cycle-terminal-errors-declared`** — `terminal_errors` maps steps of some
   phase to non-empty lists of distinct, non-empty envelope error codes.
 - **`cycle-limits-read-inputs`** — `max_attempts` and `max_cost_units` read
-  inputs only. They are evaluated once, when the cycle starts: `max_attempts`
-  must be a positive integer and `max_cost_units` a non-negative integer.
+  inputs only: no path rooted at `steps`, `run`, or `request` anywhere in the
+  expression, including inside a `$default`, and no `$run_dir` or `$path`,
+  which read a run's or the request's directory. They are evaluated once,
+  when the cycle starts and before any run exists: `max_attempts` must be a
+  positive integer and `max_cost_units` a non-negative integer.
 - **`cycle-pure`** — a cycle Op declares no authority, top-level or on any
   step, including preparation steps, and every Cog it names is present and
   declares no `reaches` when the cycle starts.
