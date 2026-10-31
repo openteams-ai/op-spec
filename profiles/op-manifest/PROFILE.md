@@ -637,7 +637,10 @@ inside it.
 
 The envelope's `cog.id` MUST equal the step's `cog.id`; an envelope naming
 another Cog, or naming none, is a failed invocation that `retry-once` does not
-retry. The runner digests the Cog package
+retry. When the envelope's `cog.id` can be read — it is a string — and
+differs from the step's, the failure is the identity mismatch, and is not
+retried, whatever else is wrong with the envelope: a malformed envelope naming
+another Cog is still that Cog's result. The runner digests the Cog package
 immediately before each invocation and records it with the result.
 
 If the Cog's argument parser rejects `--request` by name — exit code 2, the
