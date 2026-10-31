@@ -674,7 +674,7 @@ Stdout is one JSON object.
 |---|---|
 | `0` | Completed, completed with problems, or a planned dry run |
 | `1` | Failed, rejected, refused, budget exhausted, or cycle failed |
-| `2` | Refused before a run directory exists: an invalid document, request, admission, or decision; a run another process holds; a dry run that cannot evaluate its request |
+| `2` | Refused before execution or resumption proceeds: an invalid document, request, admission, or decision; a run another process holds; a dry run that cannot evaluate its request. A refused resume concerns a run directory that already exists |
 | `3` | Paused for a human decision |
 | `4` | Used only between a phase run and its cycle: the phase ended in a transition. A cycle never exits `4` |
 

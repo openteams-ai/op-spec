@@ -60,6 +60,9 @@ Initial public discussion draft.
 - Evaluation failures exclude a human artifact Gate's expressions: an
   artifact that cannot be evaluated is a failed Gate and follows `on_fail`,
   so `skip` continues the run, as the reference does.
+- Exit code `2` is a refusal before execution or resumption proceeds, not
+  only before a run directory exists: an invalid decision or a held lock on
+  resume concerns a run directory that already exists.
 - `op-md-version-agrees` compares a version as written: a stated `OP.md`
   `version` is a string, so `null` never agrees with `"None"`. The reference
   validator no longer coerces both sides with `str()`, and `pixi run check`
