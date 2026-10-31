@@ -7,8 +7,9 @@ Checks what SPEC.md lists under Validation. Given a directory, it reads OP.md
 and reports a conforming Op or findings. Given a loose Markdown file, it checks
 the frontmatter and reports a draft. When the manifest declares
 `openteams/op-manifest [0.2]`, it also checks the manifest against that
-profile's JSON Schema and checks that OP.md agrees with it (`version` must
-match; a `name` that is not the last segment of `id` is a warning). That is
+profile's JSON Schema and checks that OP.md agrees with it (a stated
+`version` must be a string equal to the manifest's; a `name` that is not the
+last segment of `id` is a warning). That is
 structural only, and the profile's cross-reference rules need a
 profile-aware implementation.
 
@@ -116,7 +117,13 @@ def profile_findings(path, schema_id, meta, warnings):
     if doc.get("schema") != schema_id:
         found.append(f"manifest declares schema {doc.get('schema')!r} but "
                      f"OP.md names {schema_id!r}")
-    if "version" in meta and str(meta["version"]) != str(doc.get("version")):
+    # Compared as written: str() on both sides made `version: null` agree
+    # with a manifest version "None", and `false` with "False". A stated
+    # version is a string, and only the manifest's own string agrees.
+    if "version" in meta and not isinstance(meta["version"], str):
+        found.append(f"OP.md declares version {meta['version']!r}, which is "
+                     f"not a string; quote it (rule op-md-version-agrees)")
+    elif "version" in meta and meta["version"] != doc.get("version"):
         found.append(f"OP.md declares version {meta['version']!r} but the "
                      f"manifest declares {doc.get('version')!r}")
     op_id = doc.get("id")

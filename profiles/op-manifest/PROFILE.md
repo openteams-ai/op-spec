@@ -136,8 +136,9 @@ for people. Steps follow the same pattern: a step's `id` identifies it and its
 - **`op-md-name-from-id`** — `OP.md`'s `name` SHOULD equal the last
   `/`-separated segment of `id`: `example.org/video-transcription` is named
   `video-transcription`.
-- **`op-md-version-agrees`** — when `OP.md` states a `version`, it MUST equal
-  `op.yaml`'s `version`.
+- **`op-md-version-agrees`** — when `OP.md` states a `version`, it MUST be a
+  string equal to `op.yaml`'s `version`, compared as written: an unquoted
+  `null`, `false` or `1.0` is not the string `"None"`, `"False"` or `"1.0"`.
 - `OP.md`'s `description` and `op.yaml`'s `title` and `description` are not
   compared.
 

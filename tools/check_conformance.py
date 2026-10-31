@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Check the Op Spec conformance corpus, examples, and envelope fixtures.
+"""Check the Op Spec conformance corpus, examples, and fixtures.
 
 Every case under profiles/op-manifest/conformance/cases/<case>/ holds an
 op.yaml and an expected.json:
@@ -29,6 +29,12 @@ removed once the reference agrees. The waiver never applies to a reference
 that implements this profile: it is held to every case exactly, so a
 regression in it cannot hide behind a note written for an older one.
 
+It also runs the reference validator, tools/validate_op.py, over every Op
+under tools/validate-op-fixtures/<fixture>/, whose expected.json states the
+`outcome` and a `finding` its findings must contain:
+
+    {"outcome": "does_not_conform", "finding": "not a string"}
+
 Exit codes: 0 every check passed, 1 at least one failed, 2 usage error.
 """
 from __future__ import annotations
@@ -50,7 +56,18 @@ CASES = PROFILE / "conformance" / "cases"
 EXAMPLES = ROOT / "examples"
 ENVELOPE_SCHEMA_PATH = ROOT / "schemas" / "envelope-1.schema.json"
 ENVELOPE_FIXTURES = ROOT / "schemas" / "envelope-fixtures"
+VALIDATOR = ROOT / "tools" / "validate_op.py"
+VALIDATOR_FIXTURES = ROOT / "tools" / "validate-op-fixtures"
 PROFILE_SCHEMA_STRING = "openteams/op-manifest [0.2]"
+
+
+def load_module(name, path):
+    spec = importlib.util.spec_from_file_location(name, path)
+    if spec is None or spec.loader is None:
+        raise SystemExit(f"cannot load {path}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
 
 
 def load_reference(path):
@@ -196,6 +213,23 @@ def main():
         if not well_formed and not errors:
             failures.append(f"{fixture.name}: malformed fixture accepted by "
                             f"the envelope schema")
+
+    # The reference validator's own checks, on Ops written to break exactly
+    # one of them: a check that coerces or skips is caught here, in CI,
+    # rather than by the next Op it wrongly accepts.
+    validate_op = load_module("validate_op", VALIDATOR)
+    for fixture in sorted(p for p in VALIDATOR_FIXTURES.iterdir() if p.is_dir()):
+        checked += 1
+        expected = json.loads((fixture / "expected.json").read_text())
+        findings, outcome = validate_op.check(fixture, [])
+        if outcome != expected["outcome"]:
+            failures.append(f"{fixture.name}: validate_op says {outcome!r}, "
+                            f"expected {expected['outcome']!r}"
+                            + (f": {findings[0]}" if findings else ""))
+        elif expected.get("finding") and not any(
+                expected["finding"] in f for f in findings):
+            failures.append(f"{fixture.name}: no validate_op finding contains "
+                            f"{expected['finding']!r}; got {findings}")
 
     for note in notes:
         print(f"note: {note}")
