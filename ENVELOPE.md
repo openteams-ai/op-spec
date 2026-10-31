@@ -91,6 +91,7 @@ A Cog MUST also emit:
 | `model-call-failed` | The model call failed upstream | 502 |
 | `model-response-malformed` | The model answered with something unusable | 502 |
 | `invocation-failed` | Synthesized by a runner: the Cog produced no well-formed envelope | — |
+| `cog-identity-mismatch` | Synthesized by a runner: the envelope names a Cog other than the one invoked | — |
 
 A Cog MAY use additional codes. A consumer MUST treat any `error` as a failed
 invocation, whether or not it recognizes the code.
@@ -102,11 +103,17 @@ something that is not envelope 1, or exits nonzero, the runner synthesizes an
 envelope with `ok: false`, `error.code: invocation-failed`, and the process
 evidence in one place, `error.evidence`. A process that exits nonzero has
 failed even when it wrote a well-formed envelope. A synthesized envelope is
-itself envelope 1:
+itself envelope 1, for example:
 
 ```json
-{"command": ["..."], "returncode": 1, "stdout_tail": "...", "stderr_tail": "...",
- "previous_attempts": [{"command": ["..."], "returncode": 2, "stdout_tail": "", "stderr_tail": "..."}]}
+{"envelope": 1, "cog": {"id": "example.org/cog-summarize", "version": "0.1.0"},
+ "task": "summarize", "ok": false, "payload": null, "raw": null, "problems": [],
+ "error": {"code": "invocation-failed",
+           "detail": "the Cog command for task 'summarize' exited 1",
+           "evidence": {"command": ["..."], "returncode": 1,
+                        "stdout_tail": "...", "stderr_tail": "...",
+                        "previous_attempts": [{"command": ["..."], "returncode": 2,
+                                               "stdout_tail": "", "stderr_tail": "..."}]}}}
 ```
 
 Each tail is at most the last 2,000 characters of the stream. `returncode` is
