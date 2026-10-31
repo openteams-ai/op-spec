@@ -38,3 +38,18 @@ Initial public discussion draft.
 - Design history records the decisions and three questions under
   consideration: finalization, routing as a Gate outcome, and classifying
   outside effects.
+
+### Changes from an independent review (2026-10-31)
+
+- A human Gate over an artifact on a `foreach` step is one decision over the
+  whole step, after the loop, and its artifact never reads the loop variable
+  (`artifact-not-per-element`). Each element has its own envelope Gate.
+- `cycle-limits-read-inputs` names what a limit may not read: `steps`, `run`,
+  or `request`, inside a `$default` too, and `$run_dir` or `$path`.
+- A present key of the wrong type is refused, never read as absent
+  (`present-key-typed`).
+- An envelope that names another Cog fails as an identity mismatch, and is
+  not retried, even when it is also malformed.
+- The checker holds a reference that implements `[0.2]` to every case;
+  `reference_divergence` excuses only a reference that predates it. The
+  corpus has 11 new cases.
