@@ -246,8 +246,9 @@ walked recursively, and scalars are literals.
   (`default:` for `$default:`) is an error. Data that needs `$`-prefixed keys
   is written with `$literal`.
 - **`path-no-home`** — a `$path` value never begins with `~`: an Op's paths do
-  not depend on whose machine runs it. A literal is refused at load and a
-  computed value at evaluation.
+  not depend on whose machine runs it. A value written in the document —
+  including one wrapped in `$literal` — is refused at load, and a computed
+  value at evaluation.
 - `$path` and `$stem` give `null` for `null`.
 
 ### Paths
@@ -366,8 +367,8 @@ hosting environment supplies and this profile does not define. `decides` and
 a `content_sha256` (the canonical digest of the change object without its two
 hash fields), and a `target_sha256` (the digest of the target as the Op read
 it). Proposals the Gate cannot put to a person — no `changes` list, a
-duplicate `change_id`, or a stated digest that is missing, malformed, or
-wrong — are a failed Gate: no pending decision is written, and `on_fail`
+duplicate `change_id`, a `target` that is missing or not a non-empty string,
+or a stated digest that is missing, malformed, or wrong — are a failed Gate: no pending decision is written, and `on_fail`
 applies. The runner never repairs a hash.
 
 The person gives every change exactly one verdict:
@@ -417,7 +418,8 @@ rejection ends the run, finally, for those bytes.
   and the run continues. A skipped single step's payload is `null`; a skipped
   `foreach` step keeps the payloads of the elements that finished.
 - `retry-once` re-invokes exactly once, and only when the envelope was
-  `ok: false`. An error-severity problem in an `ok` envelope is a judgement,
+  `ok: false`. An envelope naming another Cog is never retried: the same
+  invocation would name it again. An error-severity problem in an `ok` envelope is a judgement,
   not a glitch, and is never retried. Refused on an effectful step
   (**`effectful-no-retry`**).
 
@@ -449,7 +451,8 @@ trimmed grant.
 ```yaml
 - id: write-docs
   depends_on: [compose]
-  cog: {id: example.org/cog-docs-writer, source: ../cog-docs-writer, task: write}
+  cog: {id: example.org/cog-docs-writer, version: 0.1.0,
+        source: ../cog-docs-writer, task: write}
   authority:
     requires:
       - {resource: docs-site, action: write,
@@ -575,7 +578,8 @@ is the document without its `cycle`.
 
 A runner MUST make these checks for every named Cog before it invokes any
 step, and refuse the run on any error; a named Cog that is not present when the
-run starts is an error. A validator SHOULD make them too; a validator checking
+run starts is an error. A dry run invokes no step and need not make them. A
+validator SHOULD make them too; a validator checking
 an Op before its Cogs exist reports a missing Cog as a warning.
 
 They read the Cog's manifest. In this draft the fields are those of the
@@ -608,7 +612,8 @@ text before it. The runner takes the **last** JSON object on stdout that has an
 inside it.
 
 The envelope's `cog.id` MUST equal the step's `cog.id`; an envelope naming
-another Cog is a failed invocation. The runner digests the Cog package
+another Cog, or naming none, is a failed invocation that `retry-once` does not
+retry. The runner digests the Cog package
 immediately before each invocation and records it with the result.
 
 If the Cog's argument parser rejects `--request` by name — exit code 2, the
