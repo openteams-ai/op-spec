@@ -67,3 +67,10 @@ Initial public discussion draft.
   `version` is a string, so `null` never agrees with `"None"`. The reference
   validator no longer coerces both sides with `str()`, and `pixi run check`
   runs it over new fixtures in `tools/validate-op-fixtures`.
+
+### The reference implementation catches up (2026-11-02)
+
+- CI compares the corpus with cog-smith Op machinery 0.11.0 (cogcloud-ai/cog-smith
+  25e1c23), which implements `[0.2]`, instead of machinery 0.9.3 (c700f66).
+- No case carries `reference_divergence` any more: the reference agrees with
+  every verdict, and its findings name the rule each case expects.
