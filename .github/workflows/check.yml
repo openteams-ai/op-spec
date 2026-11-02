@@ -20,8 +20,8 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           repository: cogcloud-ai/cog-smith
-          # The reference implementation this draft was extracted from.
-          ref: c700f66c806e4153daa9a1d19758ecadc38c58c0
+          # The reference implementation: cog-smith Op machinery 0.11.0, which implements [0.2].
+          ref: 25e1c23dc3bafd272b0adf7212d307ddc2cd9707
           path: cog-smith
           persist-credentials: false
       - uses: prefix-dev/setup-pixi@d3f436a425481402e6a95a1d1fc10331c708cd9e # v0.10.2
