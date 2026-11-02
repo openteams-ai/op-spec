@@ -222,6 +222,12 @@ preserve these properties:
    set of documents it accepts changes, and a runner refuses a profile version
    it does not implement.
 
+The `openteams/op-manifest [0.2]` profile has one known exception to
+principles 4 and 5: a cycle routes a result back for revision on the outcome
+step's own payload, before that step's Gate is consulted and before any person
+sees it. Nothing routed back is accepted, and the profile lists the exception
+for review.
+
 ## Validation
 
 A v0.1 core validator checks that:

@@ -1,7 +1,7 @@
 schema: openteams/op-manifest [0.2]
-id: example.org/op-video-transcription
+id: example.org/video-transcription
 version: "0.1.0"
-name: Video transcription with speaker attribution
+title: Video transcription with speaker attribution
 description: Produces a timestamped, speaker-labelled transcript from a recording.
 
 inputs:
@@ -21,7 +21,7 @@ inputs:
 
 steps:
   - id: transcribe
-    name: Transcribe the recording
+    title: Transcribe the recording
     cog:
       id: example.org/cog-media-transcriber
       version: "0.1.0"
@@ -36,7 +36,7 @@ steps:
     on_fail: stop
 
   - id: attribute-speakers
-    name: Attribute transcript segments to speakers
+    title: Attribute transcript segments to speakers
     depends_on: [transcribe]
     cog:
       id: example.org/cog-speaker-attribution

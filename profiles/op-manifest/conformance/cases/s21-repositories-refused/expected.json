@@ -1,0 +1,6 @@
+{
+  "conforms": false,
+  "layer": "schema",
+  "rule": "targets-only",
+  "reference_divergence": "The reference (machinery 0.9.3) accepts repositories as a deprecated alias for targets; [0.2] refuses it."
+}

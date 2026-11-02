@@ -161,6 +161,10 @@
           "items": {
             "$ref": "#/$defs/evidence"
           }
+        },
+        "envelope": {
+          "type": "object",
+          "description": "A JSON object the Cog printed, kept whole: a malformed envelope, or a well-formed one from a process that exited nonzero."
         }
       }
     },

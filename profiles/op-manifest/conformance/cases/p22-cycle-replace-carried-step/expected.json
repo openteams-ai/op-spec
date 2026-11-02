@@ -1,0 +1,6 @@
+{
+  "conforms": false,
+  "layer": "profile",
+  "rule": "cycle-replace-restarted-only",
+  "reference_finding": "replacements may change only restarted steps"
+}

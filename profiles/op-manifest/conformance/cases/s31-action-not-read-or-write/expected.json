@@ -1,0 +1,6 @@
+{
+  "conforms": false,
+  "layer": "schema",
+  "rule": "read-or-write",
+  "reference_divergence": "Machinery 0.9.3 accepts this; [0.2] refuses it."
+}

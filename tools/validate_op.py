@@ -7,8 +7,11 @@ Checks what SPEC.md lists under Validation. Given a directory, it reads OP.md
 and reports a conforming Op or findings. Given a loose Markdown file, it checks
 the frontmatter and reports a draft. When the manifest declares
 `openteams/op-manifest [0.2]`, it also checks the manifest against that
-profile's JSON Schema; that is structural only, and the profile's cross-
-reference rules need a profile-aware implementation.
+profile's JSON Schema and checks that OP.md agrees with it (a stated
+`version` must be a string equal to the manifest's; a `name` that is not the
+last segment of `id` is a warning). That is
+structural only, and the profile's cross-reference rules need a
+profile-aware implementation.
 
 Exit codes: 0 no findings, 1 findings, 2 usage error.
 """
@@ -43,8 +46,9 @@ def frontmatter(text):
     return data
 
 
-def check(subject):
+def check(subject, warnings=None):
     findings, draft = [], subject.is_file()
+    warnings = [] if warnings is None else warnings
     entry = subject if draft else subject / "OP.md"
     if not entry.is_file():
         return [f"{subject} has no OP.md entry file"], "does_not_conform"
@@ -94,11 +98,11 @@ def check(subject):
         findings.append(f"'manifest' {manifest!r} resolves outside the Op "
                         f"directory")
     elif schema_id in PROFILES:
-        findings.extend(profile_findings(target, schema_id))
+        findings.extend(profile_findings(target, schema_id, meta, warnings))
     return findings, ("conforms" if not findings else "does_not_conform")
 
 
-def profile_findings(path, schema_id):
+def profile_findings(path, schema_id, meta, warnings):
     import jsonschema
     validator = jsonschema.Draft202012Validator(
         json.loads(PROFILES[schema_id].read_text()))
@@ -108,9 +112,24 @@ def profile_findings(path, schema_id):
         return [f"manifest is not readable YAML: {exc}"]
     found = [f"manifest: {'/'.join(map(str, e.path)) or '(root)'}: {e.message}"
              for e in sorted(validator.iter_errors(doc), key=lambda e: list(e.path))]
-    if isinstance(doc, dict) and doc.get("schema") != schema_id:
+    if not isinstance(doc, dict):
+        return found
+    if doc.get("schema") != schema_id:
         found.append(f"manifest declares schema {doc.get('schema')!r} but "
                      f"OP.md names {schema_id!r}")
+    # Compared as written: str() on both sides made `version: null` agree
+    # with a manifest version "None", and `false` with "False". A stated
+    # version is a string, and only the manifest's own string agrees.
+    if "version" in meta and not isinstance(meta["version"], str):
+        found.append(f"OP.md declares version {meta['version']!r}, which is "
+                     f"not a string; quote it (rule op-md-version-agrees)")
+    elif "version" in meta and meta["version"] != doc.get("version"):
+        found.append(f"OP.md declares version {meta['version']!r} but the "
+                     f"manifest declares {doc.get('version')!r}")
+    op_id = doc.get("id")
+    if isinstance(op_id, str) and meta.get("name") != op_id.rsplit("/", 1)[-1]:
+        warnings.append(f"OP.md name {meta.get('name')!r} is not the last "
+                        f"segment of the manifest id {op_id!r}")
     return found
 
 
@@ -118,12 +137,16 @@ def main(argv):
     if len(argv) not in (1, 2) or (len(argv) == 2 and argv[1] != "--json"):
         print(__doc__.strip().splitlines()[2].strip(), file=sys.stderr)
         return 2
-    findings, outcome = check(Path(argv[0]))
+    warnings = []
+    findings, outcome = check(Path(argv[0]), warnings)
     if len(argv) == 2:
-        print(json.dumps({"outcome": outcome, "findings": findings}))
+        print(json.dumps({"outcome": outcome, "findings": findings,
+                          "warnings": warnings}))
     else:
         for finding in findings:
             print(finding)
+        for warning in warnings:
+            print(f"warning: {warning}", file=sys.stderr)
         if outcome == "draft":
             print("note: a loose OP.md is a draft, not yet an Op",
                   file=sys.stderr)

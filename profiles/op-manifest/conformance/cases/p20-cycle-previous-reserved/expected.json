@@ -1,0 +1,6 @@
+{
+  "conforms": false,
+  "layer": "profile",
+  "rule": "cycle-previous-reserved",
+  "reference_finding": "cycle_previous is reserved"
+}

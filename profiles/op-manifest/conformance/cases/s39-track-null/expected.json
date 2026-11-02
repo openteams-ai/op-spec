@@ -1,0 +1,7 @@
+{
+  "conforms": false,
+  "layer": "schema",
+  "rule": "present-key-typed",
+  "note": "A key that is present has its schema type; [0.1] read this value as the key's absence.",
+  "reference_divergence": "Machinery 0.9.3 accepts this; [0.2] refuses it."
+}

@@ -1,6 +1,0 @@
-{
-  "conforms": true,
-  "layer": null,
-  "rule": "operator-exact-keyset",
-  "note": "An object is an operator only when its key set is exactly an operator's; this one is ordinary data. Listed for review in design-history."
-}

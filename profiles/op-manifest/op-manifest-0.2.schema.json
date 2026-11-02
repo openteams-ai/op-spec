@@ -4,13 +4,13 @@
   "title": "openteams/op-manifest [0.2]",
   "description": "Structural schema for an op.yaml execution manifest. It covers keys, types, enumerations, and single-document cross-field rules. Rules that relate one part of the document to another by name (step ids, dependencies, input names, cycle expansion) are defined in PROFILE.md and exercised by the conformance corpus; passing this schema is necessary but not sufficient for conformance.",
   "type": "object",
-  "required": ["schema", "id", "version", "name", "steps"],
+  "required": ["schema", "id", "version", "title", "steps"],
   "additionalProperties": false,
   "properties": {
     "schema": {"const": "openteams/op-manifest [0.2]"},
     "id": {"$ref": "#/$defs/nonEmptyString"},
     "version": {"$ref": "#/$defs/nonEmptyString"},
-    "name": {"$ref": "#/$defs/nonEmptyString"},
+    "title": {"$ref": "#/$defs/nonEmptyString"},
     "description": {"type": "string"},
     "inputs": {
       "type": "array",
@@ -26,6 +26,7 @@
       "additionalProperties": {"$ref": "#/$defs/expr"}
     },
     "track": {
+      "$comment": "Deprecated: accepted and ignored. A runner records what PROFILE.md says the Track records, whatever this lists.",
       "type": "object",
       "additionalProperties": false,
       "properties": {
@@ -65,7 +66,7 @@
       "additionalProperties": false,
       "properties": {
         "id": {"$ref": "#/$defs/stepId"},
-        "name": {"type": "string"},
+        "title": {"type": "string"},
         "depends_on": {"type": "array", "items": {"type": "string"}},
         "cog": {"$ref": "#/$defs/cogRef"},
         "foreach": {"$ref": "#/$defs/foreach"},
@@ -84,6 +85,11 @@
         {"$comment": "An effectful step recovers by resume, never by re-invocation.",
          "not": {"required": ["authority", "on_fail"],
                  "properties": {"on_fail": {"const": "retry-once"}}}},
+        {"$comment": "A person decides about one list of changes, never one per element.",
+         "not": {"required": ["foreach", "gate"],
+                 "properties": {"gate": {"required": ["policy"],
+                                         "properties": {"policy": {"const": "human"},
+                                                        "decides": {"const": "changes"}}}}}},
         {"$comment": "A human decides about one set of proposals, so a human-gated step is never repeated.",
          "not": {"required": ["repeat", "gate"],
                  "properties": {"gate": {"required": ["policy"],
@@ -93,11 +99,11 @@
 
     "cogRef": {
       "type": "object",
-      "required": ["id", "source", "task"],
+      "required": ["id", "version", "source", "task"],
       "additionalProperties": false,
       "properties": {
         "id": {"$ref": "#/$defs/nonEmptyString"},
-        "version": {"type": ["string", "null"]},
+        "version": {"$ref": "#/$defs/nonEmptyString"},
         "source": {"$ref": "#/$defs/nonEmptyString"},
         "task": {"$ref": "#/$defs/nonEmptyString"}
       }
@@ -133,7 +139,8 @@
       "additionalProperties": false,
       "properties": {
         "policy": {"enum": ["envelope-ok-no-error-problems", "human"]},
-        "guards": {"type": "array", "maxItems": 0},
+        "guards": {"type": "array", "maxItems": 0,
+                   "$comment": "Deprecated: accepted only empty, and ignored. The name stays reserved for Guards a hosting environment supplies."},
         "decides": {"enum": ["changes", "artifact"]},
         "artifact": {"$ref": "#/$defs/artifact"}
       },
@@ -188,13 +195,10 @@
       "additionalProperties": false,
       "properties": {
         "resource": {"$ref": "#/$defs/nonEmptyString"},
-        "action": {"$ref": "#/$defs/nonEmptyString"},
+        "action": {"enum": ["read", "write"]},
         "targets": {"$ref": "#/$defs/expr"},
-        "repositories": {"$ref": "#/$defs/expr",
-                         "$comment": "Deprecated alias for targets."},
         "changes": {"$ref": "#/$defs/expr"}
       },
-      "not": {"required": ["targets", "repositories"]},
       "if": {"properties": {"action": {"const": "write"}}},
       "then": {
         "required": ["changes"],
@@ -212,10 +216,8 @@
       },
       "else": {
         "not": {"required": ["changes"]},
-        "anyOf": [
-          {"required": ["targets"], "properties": {"targets": {"not": {"type": "null"}}}},
-          {"required": ["repositories"], "properties": {"repositories": {"not": {"type": "null"}}}}
-        ]
+        "required": ["targets"],
+        "properties": {"targets": {"not": {"type": "null"}}}
       }
     },
 
@@ -271,7 +273,7 @@
     },
 
     "expr": {
-      "$comment": "A mapping expression. An object whose key set is EXACTLY one operator's is that operator; every other object is ordinary data and is walked; scalars are literals. A $-prefixed key that names no operator is refused wherever it appears.",
+      "$comment": "A mapping expression. An object whose key set is EXACTLY one operator's is that operator; an object with no $-prefixed key is ordinary data and is walked; scalars are literals. Any other object holding a $-prefixed key is refused.",
       "anyOf": [
         {"type": ["string", "number", "boolean", "null"]},
         {"type": "array", "items": {"$ref": "#/$defs/expr"}},
@@ -287,15 +289,10 @@
     },
 
     "dataObject": {
-      "allOf": [
-        {"type": "object",
-         "propertyNames": {"anyOf": [
-           {"not": {"pattern": "^\\$"}},
-           {"enum": ["$from", "$default", "$path", "$run_dir", "$stem", "$literal", "$sha256"]}
-         ]},
-         "additionalProperties": {"$ref": "#/$defs/expr"}},
-        {"$ref": "#/$defs/notOperator"}
-      ]
+      "$comment": "Ordinary data carries no $-prefixed key; data that needs one is written with $literal.",
+      "type": "object",
+      "propertyNames": {"not": {"pattern": "^\\$"}},
+      "additionalProperties": {"$ref": "#/$defs/expr"}
     },
 
     "notOperator": {
@@ -330,7 +327,16 @@
     },
     "opPath": {
       "type": "object", "required": ["$path"], "additionalProperties": false,
-      "properties": {"$path": {"$ref": "#/$defs/expr"}}
+      "properties": {
+        "$path": {
+          "anyOf": [
+            {"type": "string",
+             "$comment": "A home-directory form is refused; a computed value is checked when it is evaluated.",
+             "not": {"pattern": "^~"}},
+            {"allOf": [{"not": {"type": "string"}}, {"$ref": "#/$defs/expr"}]}
+          ]
+        }
+      }
     },
     "opRunDir": {
       "type": "object", "required": ["$run_dir"], "additionalProperties": false,

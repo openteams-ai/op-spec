@@ -1,7 +1,7 @@
 schema: openteams/op-manifest [0.2]
 id: example.org/op-conformance
 version: 0.1.0
-name: Conformance case
+title: Conformance case
 inputs:
 - name: texts
   required: true

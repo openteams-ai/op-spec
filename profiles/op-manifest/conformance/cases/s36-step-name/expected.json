@@ -1,0 +1,7 @@
+{
+  "conforms": false,
+  "layer": "schema",
+  "rule": "step-title",
+  "note": "A step's human-readable name is title in [0.2], as the Op's is.",
+  "reference_divergence": "Machinery 0.9.3 names a step's human-readable name `name`; [0.2] refuses it and reads it as `title` only in a [0.1] document."
+}

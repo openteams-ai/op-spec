@@ -1,0 +1,7 @@
+{
+  "conforms": false,
+  "layer": "profile",
+  "rule": "artifact-not-per-element",
+  "note": "A human artifact Gate on a foreach step is one decision over the whole step, made after the loop, when no element is current.",
+  "reference_divergence": "Machinery 0.9.3 accepts this, and the Gate can then only fail at run time; [0.2] refuses it."
+}

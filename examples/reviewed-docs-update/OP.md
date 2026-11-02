@@ -18,6 +18,8 @@ Shows authority. Nothing here grants anything by being written down.
    hashed. A person approves, rejects, or edits each one.
 3. **Write** — `example.org/cog-docs-writer` receives a grant carrying exactly
    the approved changes, and checks each target's hash against a fresh read
-   before writing.
+   before writing. The grant is issued only if the run's owner also admitted
+   writes to every page an approved change targets: a person's approval never
+   reaches past the owner's admission.
 
 **Deliverable:** the write Cog's report of what it applied.
